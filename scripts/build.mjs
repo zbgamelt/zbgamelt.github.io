@@ -90,13 +90,13 @@ async function loadData() {
       }
       throw err;
     }
-    writeFileSync(cachePath, JSON.stringify({ fetchedAt: new Date().toISOString(), discussions: nodes }, null, 2));
-    console.log(`✓ 从 GitHub 拉取 ${nodes.length} 个讨论`);
+    writeFileSync(cachePath, JSON.stringify({ discussions: nodes }, null, 2), 'utf8');
+    console.log(`✓ 从 GitHub 拉取 ${nodes.length} 个讨论（${new Date().toISOString()}）`);
     return { discussions: nodes, source: 'github' };
   }
   if (!forceSample && existsSync(cachePath)) {
     const cached = JSON.parse(readFileSync(cachePath, 'utf8'));
-    console.log(`✓ 用缓存数据（${cached.discussions.length} 个讨论，抓取于 ${cached.fetchedAt}）`);
+    console.log(`✓ 用缓存数据（${cached.discussions.length} 个讨论）`);
     return { discussions: cached.discussions, source: 'cache' };
   }
   const sample = JSON.parse(readFileSync(samplePath, 'utf8'));
@@ -140,21 +140,6 @@ function fmtDate(iso) {
     timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(new Date(iso));
-}
-
-function timeAgo(iso) {
-  if (!iso) return '';
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.round(diff / 60000);
-  if (m < 1) return '刚刚';
-  if (m < 60) return `${m} 分钟前`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h} 小时前`;
-  const d = Math.round(h / 24);
-  if (d < 30) return `${d} 天前`;
-  const mo = Math.round(d / 30);
-  if (mo < 12) return `${mo} 个月前`;
-  return `${Math.round(mo / 12)} 年前`;
 }
 
 const slug = String(SITE.name).replace(/\s+/g, '-').toLowerCase();
@@ -203,8 +188,8 @@ ${body}
 </main>
 <footer class="foot">
   <div class="wrap foot__inner">
-    <span>帖子托管在 GitHub Discussions · 本站为只读静态镜像</span>
-    <span>构建于 ${esc(fmtDate(new Date().toISOString()))}</span>
+    <span>帖子托管在 GitHub Discussions · 本站是只读静态镜像</span>
+    <span><a href="${REPO_URL}" target="_blank" rel="noopener">${esc(OWNER)}/${esc(NAME)}</a></span>
   </div>
 </footer>
 ${script}
@@ -246,7 +231,7 @@ function threadRow(d, base) {
           ${avatar(d.author, 22)}
           ${authorName(d.author, false)}
           <span class="dot">·</span>
-          <time datetime="${esc(d.updatedAt)}" title="${esc(fmtDate(d.updatedAt))}">${esc(timeAgo(d.updatedAt))}</time>
+          <time datetime="${esc(d.updatedAt)}" title="${esc(fmtDate(d.updatedAt))}">${esc(fmtDate(d.updatedAt))}</time>
         </div>
       </div>
       <div class="thread__count" aria-label="${replies} 条回复"><strong>${replies}</strong><span>回复</span></div>
@@ -301,6 +286,27 @@ ${list.map((d) => threadRow(d, '')).join('\n')}
   <p class="noresult" id="noresult" hidden>没有匹配的话题，换个词试试？</p>`;
   const script = `<script>
 (function () {
+  // 相对时间（“3 天前”）在浏览器里算：静态 HTML 里存的是绝对时间，
+  // 否则每次构建都会因为“多久之前”变了而提交一次，纯属噪声。
+  function ago(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return null;
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return '刚刚';
+    if (m < 60) return m + ' 分钟前';
+    var h = Math.round(m / 60);
+    if (h < 24) return h + ' 小时前';
+    var d = Math.round(h / 24);
+    if (d < 30) return d + ' 天前';
+    var mo = Math.round(d / 30);
+    if (mo < 12) return mo + ' 个月前';
+    return Math.round(mo / 12) + ' 年前';
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.thread__meta time[datetime]'), function (el) {
+    var rel = ago(el.getAttribute('datetime'));
+    if (rel) el.textContent = rel;
+  });
+
   var q = document.getElementById('q');
   if (!q) return;
   var items = Array.prototype.slice.call(document.querySelectorAll('.thread'));
