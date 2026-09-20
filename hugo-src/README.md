@@ -17,4 +17,6 @@ hugo --gc --minify --destination ../zbgamelttwo
   用 `.RelPermalink` 或 `{{ "xxx" | relURL }}`（不带前导斜杠）。
 - `zbgamelttwo/` 是**生成物**，由 `.github/workflows/hugo-subsite.yml` 自动重建并提交，手改会被覆盖。
 - 改内容只动 `content/`、`layouts/`、`assets/`、`hugo.toml`。
+- ⚠️ **文章 `date` 不要写到未来**：Hugo 默认跳过未来日期的文章，而且**不报错**——表现是
+  构建成功但那一页压根不存在（`Pages` 计数也不变）。写当天日期时留点余量，或改用已过去的时间。
 - 论坛的 `scripts/build.mjs` 只清理 `t/`、`post/`、`search/`、`index.html`、`404.html`，不会碰这个目录。
