@@ -222,7 +222,7 @@ function threadRow(d, base) {
   return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}" data-search="${esc(`${d.title} ${cat} ${d.author?.login ?? ''} ${excerpt}`)}">
       <div class="thread__body">
         <div class="thread__top">
-          <span class="chip">${d.category?.emoji ? esc(d.category.emoji) + ' ' : ''}${esc(cat || '讨论')}</span>
+          <span class="chip">${catEmoji(d.category?.emoji) ? esc(catEmoji(d.category.emoji)) + ' ' : ''}${esc(cat || '讨论')}</span>
           <span class="thread__num">#${d.number}</span>
         </div>
         <h2 class="thread__title">${esc(d.title)}</h2>
@@ -371,6 +371,35 @@ function giscusWidget(d) {
       async></script>`;
 }
 
+/**
+ * GitHub GraphQL 返回的 category.emoji 是短码（如 ":mega:"），不是 emoji 字符；
+ * 样例数据里写的是真 emoji，所以本地预览盖不住这个坑。
+ * 认得的映射成真 emoji，认不得的短码宁可留白，不要显示 ":xxx:" 生字。
+ */
+const CAT_EMOJI = {
+  ':mega:': '📣',
+  ':bulb:': '💡',
+  ':speech_balloon:': '💬',
+  ':pencil:': '✏️',
+  ':bar_chart:': '📊',
+  ':question:': '❓',
+  ':raised_hands:': '🙌',
+  ':tada:': '🎉',
+  ':sparkles:': '✨',
+  ':loudspeaker:': '📢',
+  ':bug:': '🐛',
+  ':rocket:': '🚀',
+  ':thought_balloon:': '🗨️',
+};
+
+function catEmoji(emoji) {
+  if (!emoji) return '';
+  const e = String(emoji).trim();
+  if (CAT_EMOJI[e]) return CAT_EMOJI[e];
+  if (e.startsWith(':') && e.endsWith(':')) return '';
+  return e;
+}
+
 function renderThread(d) {
   const comments = (d.comments?.nodes ?? [])
     .slice()
@@ -399,7 +428,7 @@ function renderThread(d) {
   const body = `  <nav class="crumb"><a href="../../">← 全部话题</a></nav>
   <article class="post">
     <div class="thread__top">
-      <span class="chip">${d.category?.emoji ? esc(d.category.emoji) + ' ' : ''}${esc(d.category?.name || '讨论')}</span>
+      <span class="chip">${catEmoji(d.category?.emoji) ? esc(catEmoji(d.category.emoji)) + ' ' : ''}${esc(d.category?.name || '讨论')}</span>
       <span class="thread__num">#${d.number}</span>
     </div>
     <h1 class="post__title">${esc(d.title)}</h1>
