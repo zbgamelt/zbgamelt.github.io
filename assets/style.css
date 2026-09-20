@@ -244,7 +244,6 @@ main { padding: 46px 0 72px; }
 .md th { background: var(--card-2); color: var(--text-strong); }
 
 /* ── 页脚 ───────────────────────────── */
-.foot { border-top: 1px solid var(--border); padding: 26px 0 40px; }
 .foot__inner { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; color: #6b727c; font-size: 12.5px; }
 
 @media (max-width: 560px) {
