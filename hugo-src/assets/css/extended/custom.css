@@ -1,0 +1,134 @@
+/* ==========================================================================
+   PaperMod 覆盖层：近黑底色 + 黄色强调（用户偏好）
+   变量名以 themes/PaperMod/assets/css/core/theme-vars.css 为准
+   ========================================================================== */
+
+:root {
+  --accent: #ffd964;
+  --accent-fg: #12130f;
+  --main-width: 760px;
+}
+
+:root[data-theme="dark"] {
+  --theme: #0b0c0e;
+  --entry: #131417;
+  --primary: #eceef2;
+  --secondary: #8b9099;
+  --tertiary: #2a2c31;
+  --content: #d5d8de;
+  --code-block-bg: #131417;
+  --code-bg: #191b1f;
+  --border: #24262b;
+}
+
+/* 中文正文排版：字重和行高都比默认再放松一点 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.8;
+  letter-spacing: 0.01em;
+}
+
+.post-content,
+.md-content {
+  line-height: 1.85;
+}
+
+.post-content p,
+.md-content p {
+  margin: 0 0 1.25em;
+}
+
+/* 标题更利落 */
+.post-title,
+.entry-header h2,
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+/* 链接强调色 */
+.post-content a,
+.md-content a,
+.entry-content a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* 导航：hover / 当前项 */
+#menu a:hover,
+#menu .active {
+  color: var(--accent);
+}
+
+.logo a {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* 首页头部 */
+.home-info .entry-content {
+  color: var(--secondary);
+}
+.home-info .entry-header h1 {
+  font-size: 34px;
+  letter-spacing: -0.02em;
+}
+
+/* 文章列表卡片 */
+.post-entry {
+  border-radius: 14px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.post-entry:hover {
+  border-color: var(--tertiary);
+  transform: translateY(-1px);
+}
+
+.entry-header h2 {
+  font-size: 20px;
+}
+
+/* 标签 chip */
+.terms-tags li a:hover,
+.post-tags a:hover {
+  color: var(--accent);
+}
+
+/* 代码块与行内代码 */
+.post-content code {
+  border-radius: 6px;
+}
+
+.post-content pre {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+/* 引用块 */
+.post-content blockquote {
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+}
+
+/* 页脚 */
+.footer {
+  color: var(--secondary);
+  font-size: 13.5px;
+}
+
+/* 移动端稍微收一点留白 */
+@media (max-width: 560px) {
+  :root {
+    --gap: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

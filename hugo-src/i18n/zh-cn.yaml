@@ -1,0 +1,35 @@
+# PaperMod 自带的 i18n 只有 zh.yaml，而本站语言是 zh-cn —— 不补这个文件
+# 就会回落到英文（页面里出现 "Home" / "Table of Contents"）。
+- id: prev_page
+  translation: "上一页"
+
+- id: next_page
+  translation: "下一页"
+
+- id: read_time
+  translation:
+    one: "1 分钟"
+    other: "{{ .Count }} 分钟"
+
+- id: words
+  translation:
+    one: "字"
+    other: "{{ .Count }} 字"
+
+- id: toc
+  translation: "目录"
+
+- id: translations
+  translation: "语言"
+
+- id: home
+  translation: "首页"
+
+- id: edit_post
+  translation: "编辑"
+
+- id: code_copy
+  translation: "复制"
+
+- id: code_copied
+  translation: "已复制"

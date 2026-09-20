@@ -1,16 +1,17 @@
 baseURL = "https://zbgamelt.github.io/zbgamelttwo/"
+title = "ZBGAME LT"
+theme = "PaperMod"
 locale = "zh-cn"
 defaultContentLanguage = "zh-cn"
-title = "ZBGAME LT"
 enableRobotsTXT = true
-enableGitInfo = false
+enableEmoji = true
 
-# 主题是站内自带的 layouts/ + assets/，不依赖任何外部主题仓库，
-# 这样 CI 构建不需要 git submodule / Hugo Modules，可复现。
+# 首页要出 JSON 才能用主题自带搜索
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
 
-[params]
-  description = "轻量、干净的静态站点。写点东西，慢慢更新。"
-  author = "zbgamelttwo"
+[pagination]
+  pagerSize = 10
 
 [markup]
   [markup.highlight]
@@ -18,10 +19,42 @@ enableGitInfo = false
     style = "monokai"
   [markup.goldmark.renderer]
     unsafe = true
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 3
 
-[outputs]
-  home = ["HTML", "RSS"]
-  section = ["HTML", "RSS"]
+[params]
+  env = "production"
+  description = "轻量、干净的静态站点。写点东西，慢慢更新。"
+  author = "zbgamelt"
+  mainSections = ["posts"]
+
+  # 只用深色，不给切换（用户偏好近黑 + 黄色强调）
+  defaultTheme = "dark"
+  disableThemeToggle = true
+
+  DateFormat = "2006-01-02"
+  ShowReadingTime = true
+  ShowShareButtons = false
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowToc = true
+  TocOpen = false
+  ShowFullTextinRSS = false
+  hideFooter = false
+
+  [params.homeInfoParams]
+    Title = "ZBGAME LT"
+    Content = "轻量、干净的静态站点。写点东西，慢慢更新。"
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/zbgamelt"
+
+  [[params.socialIcons]]
+    name = "rss"
+    url = "index.xml"
 
 [[menus.main]]
   name = "首页"
@@ -34,6 +67,11 @@ enableGitInfo = false
   weight = 20
 
 [[menus.main]]
+  name = "搜索"
+  pageRef = "/search"
+  weight = 30
+
+[[menus.main]]
   name = "关于"
   pageRef = "/about"
-  weight = 30
+  weight = 40

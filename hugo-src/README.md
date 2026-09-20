@@ -1,22 +1,40 @@
 # hugo-src → /zbgamelttwo/ 子站
 
-这个目录是**子站的 Hugo 源**：构建产物输出到仓库根目录的 `zbgamelttwo/`，
+子站的 **Hugo 源**：构建产物输出到仓库根目录的 `zbgamelttwo/`，
 线上地址 https://zbgamelt.github.io/zbgamelttwo/ （跟论坛同一个 Pages 站点，只是不同子路径）。
 
-## 本地构建
+## 组成
+
+| 路径 | 说明 |
+| --- | --- |
+| `hugo.toml` | 站点配置（PaperMod、菜单、baseURL） |
+| `content/` | Markdown 内容 |
+| `themes/PaperMod/` | 主题**整个塞进来**（不走 submodule / Hugo Modules，CI 免配置） |
+| `assets/css/extended/custom.css` | PaperMod 覆盖层：近黑底 + 黄色强调 + 中文字体栈 |
+| `i18n/zh-cn.yaml` | 主题只有 `zh.yaml`，本站语言是 `zh-cn`，不补就回落到英文 "Home" / "Table of Contents" |
+
+## 本地构建与预览
 
 ```bash
-cd hugo-src
-hugo --gc --minify --destination ../zbgamelttwo
+hugo --gc --minify --destination ../zbgamelttwo    # 正式产物（CI 也这么跑）
+
+hugo server --buildDrafts                          # 开发服务器，http://localhost:1313
 ```
 
-## 注意
+⚠️ **直接 `hugo` 后拿 `public/` 用普通 http 服务器打开，样式会全丢**：
+`baseURL` 带 `/zbgamelttwo/` 前缀，本地没这个路径，CSS 全部 404。
+要看真实效果：
 
-- `hugo.toml` 的 `baseURL` **必须**是 `https://zbgamelt.github.io/zbgamelttwo/`（带子路径）。
-  模板里不要用 `{{ "/xxx" | relURL }}` —— 前导斜杠会丢掉子路径前缀导致 404，
+```bash
+hugo --baseURL "http://127.0.0.1:8902/" -d /tmp/preview
+```
+
+## 注意事项
+
+- `baseURL` **必须**是 `https://zbgamelt.github.io/zbgamelttwo/`（带子路径）。
+  自写模板时不要用 `{{ "/xxx" | relURL }}` —— 前导斜杠会丢掉子路径前缀导致 404，
   用 `.RelPermalink` 或 `{{ "xxx" | relURL }}`（不带前导斜杠）。
+- ⚠️ **文章 `date` 不要写到未来**：Hugo 默认跳过未来日期的文章，而且**不报错**——
+  表现是构建成功但那一页压根不存在（`Pages` 计数也不变）。写当天日期要留余量。
 - `zbgamelttwo/` 是**生成物**，由 `.github/workflows/hugo-subsite.yml` 自动重建并提交，手改会被覆盖。
-- 改内容只动 `content/`、`layouts/`、`assets/`、`hugo.toml`。
-- ⚠️ **文章 `date` 不要写到未来**：Hugo 默认跳过未来日期的文章，而且**不报错**——表现是
-  构建成功但那一页压根不存在（`Pages` 计数也不变）。写当天日期时留点余量，或改用已过去的时间。
 - 论坛的 `scripts/build.mjs` 只清理 `t/`、`post/`、`search/`、`index.html`、`404.html`，不会碰这个目录。
