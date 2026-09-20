@@ -1,0 +1,21 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>把 Hugo 子站挂进已有的 Pages 仓库 · ZBGAME LT</title><meta name=description content="不用新开仓库：源放 hugo-src/，产物输出到 zbgamelttwo/，跟论坛共用同一个 Pages 站点。"><meta name=author content="zbgamelttwo"><meta name=theme-color content="#0b0c0e"><link rel=stylesheet href=/zbgamelttwo/css/main.min.4bd117475119fd2e4476d018219b4b986f7fcec5cade1acf1b4bcbe83dea0579.css integrity="sha256-S9EXR1EZ/S5EdtAYIZtLmG9/zsXK3hrPG0vL6D3qBXk="><link rel=icon href=/zbgamelttwo/favicon.svg type=image/svg+xml></head><body><header class=site-head><div class="wrap head-inner"><a class=brand href=/zbgamelttwo/><span class=dot aria-hidden=true></span>ZBGAME LT</a><nav class=nav><a href=/zbgamelttwo/>首页</a>
+<a href=/zbgamelttwo/posts/>文章</a>
+<a href=/zbgamelttwo/about/>关于</a></nav></div></header><main class=wrap><article class=post><header class=post-head><h1>把 Hugo 子站挂进已有的 Pages 仓库</h1><p class=meta><time datetime=2026-09-20>2026-09-20</time>
+<span class=sep>·</span><span class=tag>Hugo</span><span class=tag>部署</span>
+<span class=sep>·</span><span>1 分钟</span></p></header><div class=prose><p>想加这个站的时候，最直接的办法是新开一个仓库。但 Pages 的用户站点一个账号只有一个
+（<code>zbgamelt.github.io</code> 已经被论坛占了），所以改成<strong>在已有仓库里挖一个子目录</strong>。</p><h2 id=结构>结构</h2><div class=highlight><pre tabindex=0 class=chroma><code class=language-text data-lang=text><span class=line><span class=cl>zbgamelt.github.io/
+</span></span><span class=line><span class=cl>├── scripts/build.mjs      # 论坛：把 Discussions 渲染成静态页
+</span></span><span class=line><span class=cl>├── index.html  t/  post/  # 论坛产物（由 CI 生成）
+</span></span><span class=line><span class=cl>├── hugo-src/              # ← 子站源（手写）
+</span></span><span class=line><span class=cl>│   ├── hugo.toml
+</span></span><span class=line><span class=cl>│   ├── content/  layouts/  assets/
+</span></span><span class=line><span class=cl>└── zbgamelttwo/           # ← 子站产物（由 CI 生成）
+</span></span></code></pre></div><p>线上地址：<a href=https://zbgamelt.github.io/zbgamelttwo/>https://zbgamelt.github.io/zbgamelttwo/</a></p><h2 id=两个容易踩的点>两个容易踩的点</h2><p><strong>1. <code>baseURL</code> 必须带子路径。</strong></p><div class=highlight><pre tabindex=0 class=chroma><code class=language-toml data-lang=toml><span class=line><span class=cl><span class=nx>baseURL</span> <span class=p>=</span> <span class=s2>&#34;https://zbgamelt.github.io/zbgamelttwo/&#34;</span>
+</span></span></code></pre></div><p><strong>2. 模板里别用前导斜杠的 <code>relURL</code>。</strong></p><div class=highlight><pre tabindex=0 class=chroma><code class=language-go-html-template data-lang=go-html-template><span class=line><span class=cl><span class=cp>{{</span><span class=w> </span><span class=s>&#34;/posts/&#34;</span><span class=w> </span><span class=o>|</span><span class=w> </span><span class=nx>relURL</span><span class=w> </span><span class=cp>}}</span>   <span class=c>&lt;!-- ❌ 会输出 /posts/，丢掉 /zbgamelttwo/ 前缀 → 404 --&gt;</span>
+</span></span><span class=line><span class=cl><span class=cp>{{</span><span class=w> </span><span class=s>&#34;posts/&#34;</span><span class=w>  </span><span class=o>|</span><span class=w> </span><span class=nx>relURL</span><span class=w> </span><span class=cp>}}</span>   <span class=c>&lt;!-- ✅ /zbgamelttwo/posts/ --&gt;</span>
+</span></span><span class=line><span class=cl><span class=cp>{{</span><span class=w> </span><span class=o>(</span><span class=nx>site</span><span class=na>.GetPage</span><span class=w> </span><span class=s>&#34;posts&#34;</span><span class=o>)</span><span class=na>.RelPermalink</span><span class=w> </span><span class=cp>}}</span>  <span class=c>&lt;!-- ✅ 最稳 --&gt;</span>
+</span></span></code></pre></div><p>这个坑很隐蔽：首页和导航看着都正常，点进去才 404。</p><h2 id=两条流水线并存>两条流水线并存</h2><p>论坛的 <code>build.yml</code> 只清理 <code>t/</code>、<code>post/</code>、<code>search/</code>、<code>index.html</code>、<code>404.html</code>，
+不碰子站目录；子站的 <code>hugo-subsite.yml</code> 只提交 <code>zbgamelttwo/</code>。
+两边都可能往 <code>main</code> 推，所以子站那条加了 rebase 重试，避免撞车。</p></div></article><p class=back><a href=/zbgamelttwo/posts/>← 全部文章</a></p></main><footer class=site-foot><div class="wrap foot-inner"><span>© 2026 ZBGAME LT</span>
+<span class=foot-links><a href=/zbgamelttwo/index.xml>RSS</a>
+<a href=https://github.com/zbgamelt>GitHub</a></span></div></footer></body></html>
