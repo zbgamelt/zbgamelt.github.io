@@ -551,9 +551,23 @@ function renderCompose() {
       <p class="empty__hint">首页要等站点完成重建才会出现这条（通常几分钟）。</p>
     </div>
   </section>`;
+  // 配置里给的是基址；万一被写成完整端点（历史上是 .../new-post），这里也兜住。
+  // 必须在构建期算好：下面的脚本是模板字符串，`\/` 会被当成转义退化成 `/`，
+  // 带反斜杠的正则写进模板会静默产生 `//...` 注释，整个脚本语法错死掉。
+  const apiBase = (() => {
+    try {
+      const u = new URL(p.api);
+      let path = u.pathname;
+      while (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+      if (path === '/new-post' || path === '/api') path = '';
+      return u.origin + (path === '/' ? '' : path);
+    } catch {
+      return String(p.api || '');
+    }
+  })();
   const script = `<script>
 (function () {
-  var API = ${JSON.stringify(p.api)};
+  var API = ${JSON.stringify(apiBase)};
   var KEY = 'zbforum_sess';
   var S = '';
   try { S = localStorage.getItem(KEY) || ''; } catch (e) { S = ''; }
