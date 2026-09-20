@@ -171,17 +171,7 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
 <a class="skip" href="#main">跳到内容</a>
 <header class="top">
   <div class="wrap top__inner">
-    <a class="brand" href="${base || './'}">
-      <span class="brand__mark" aria-hidden="true"></span>
-      <span class="brand__text">
-        <strong>${esc(SITE.name)}</strong>
-        <small>${esc(SITE.tagline || '')}</small>
-      </span>
-    </a>
-    <nav class="top__nav">
-      <a class="top__post" href="${base}post/">发新帖</a>
-      <a href="${DISCUSS_URL}" target="_blank" rel="noopener">GitHub 讨论区</a>
-    </nav>
+    <a class="brand" href="${base || './'}">${esc(SITE.name)}</a>
   </div>
 </header>
 <main id="main" class="wrap">

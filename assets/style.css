@@ -51,18 +51,9 @@ a:hover { color: var(--accent); }
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; min-height: 74px;
 }
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand:hover { color: inherit; }
-.brand__mark {
-  width: 30px; height: 30px; flex: none; border-radius: 9px;
-  background: var(--accent);
-  clip-path: path("M0 8a8 8 0 0 1 8-8h14a8 8 0 0 1 8 8v10a4 4 0 0 1-4 4H13l-7 6v-6H4a4 4 0 0 1-4-4z");
-}
-.brand__text { display: flex; flex-direction: column; line-height: 1.25; }
-.brand__text strong { font-size: 16px; font-weight: 600; color: var(--text-strong); }
-.brand__text small { color: var(--muted); font-size: 12px; letter-spacing: .02em; }
-.top__nav a { color: var(--muted); font-size: 14px; }
-.top__nav a:hover { color: var(--accent); }
+/* 顶栏只剩左侧一行纯文字（图标、副标题、右侧导航都已去掉） */
+.brand { font-size: 16px; font-weight: 600; color: var(--text-strong); letter-spacing: .01em; }
+.brand:hover { color: var(--text-strong); opacity: .88; }
 
 /* ── 首屏 ───────────────────────────── */
 main { padding: 46px 0 72px; }
@@ -236,7 +227,6 @@ main { padding: 46px 0 72px; }
 .giscus-frame { width: 100%; border: none; }
 
 /* ── 发新帖入口 ───────────────────────── */
-.top__post { color: var(--accent) !important; font-weight: 650; }
 .hero__cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 0; }
 .hero__cta .btn { padding: 10px 22px; font-size: 14.5px; }
 .hero__note { color: #6b727c; font-size: 12.5px; }
