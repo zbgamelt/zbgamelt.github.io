@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发新帖 — zbgamelt 论坛</title>
+<meta name="description" content="在本站发一条新帖，不用注册 GitHub 账号">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="发新帖 — zbgamelt 论坛">
+<meta property="og:description" content="在本站发一条新帖，不用注册 GitHub 账号">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%230b0c0e%22%2F%3E%3Cpath%20d%3D%22M8%2010.5h16v9a2%202%200%200%201-2%202h-8l-4.5%203.5V21.5H10a2%202%200%200%201-2-2z%22%20fill%3D%22%23ffd83d%22%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body class="page-compose">
+<a class="skip" href="#main">跳到内容</a>
+<header class="top">
+  <div class="wrap top__inner">
+    <a class="brand" href="../">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <strong>zbgamelt 论坛</strong>
+        <small>提问 · 反馈 · 闲聊</small>
+      </span>
+    </a>
+    <nav class="top__nav">
+      <a class="top__post" href="../post/">发新帖</a>
+      <a href="https://github.com/zbgamelt/zbgamelt.github.io/discussions" target="_blank" rel="noopener">GitHub 讨论区</a>
+    </nav>
+  </div>
+</header>
+<main id="main" class="wrap">
+  <nav class="crumb"><a href="../">← 全部话题</a></nav>
+  <section class="compose">
+    <h1>发新帖</h1>
+    <p class="compose__sub">不用注册 GitHub 账号。发完几分钟内就会出现在首页。</p>
+    <form id="postform" class="form" novalidate>
+      <label class="field">
+        <span class="field__label">昵称 <i>选填</i></span>
+        <input id="nick" name="nickname" type="text" maxlength="24" placeholder="不填就署名「匿名访客」" autocomplete="nickname">
+      </label>
+      <label class="field">
+        <span class="field__label">标题</span>
+        <input id="title" name="title" type="text" maxlength="120" placeholder="一句话说清楚你要问什么">
+      </label>
+      <label class="field">
+        <span class="field__label">正文</span>
+        <textarea id="body" name="body" rows="10" placeholder="支持 Markdown。写得越具体，越容易被答上。"></textarea>
+      </label>
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAAE9lJ4BNvsdgW4VJ" data-theme="dark" data-language="zh-cn"></div>
+      <div class="form__foot">
+        <button class="btn" id="submit" type="submit">发布</button>
+        <span class="form__note" id="note" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+    <div class="done" id="done" hidden>
+      <h2>发出去了 ✅</h2>
+      <p id="done__text"></p>
+      <p class="done__links">
+        <a class="btn" id="done__gh" target="_blank" rel="noopener">在 GitHub 上查看</a>
+        <a class="btn btn--ghost" href="../">回论坛首页</a>
+      </p>
+      <p class="empty__hint">首页要等站点完成重建才会出现这条（通常几分钟）。</p>
+    </div>
+  </section>
+</main>
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <span>帖子托管在 GitHub Discussions · 本站是只读静态镜像</span>
+    <span><a href="https://github.com/zbgamelt/zbgamelt.github.io" target="_blank" rel="noopener">zbgamelt/zbgamelt.github.io</a></span>
+  </div>
+</footer>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+(function () {
+  var form = document.getElementById('postform');
+  if (!form) return;
+  var note = document.getElementById('note');
+  var btn = document.getElementById('submit');
+  function setNote(t) { if (note) note.textContent = t; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var title = document.getElementById('title').value.trim();
+    var body = document.getElementById('body').value.trim();
+    var nick = document.getElementById('nick').value.trim();
+    var ts = form.querySelector('[name="cf-turnstile-response"]');
+    if (title.length < 4) return setNote('标题至少 4 个字');
+    if (body.length < 8) return setNote('正文再写长一点点');
+    if (!ts || !ts.value) return setNote('人机验证还没完成，稍等一下再点发布');
+    btn.disabled = true;
+    setNote('正在发布…');
+    fetch("https://forum-api.zbgame.bid/new-post", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname: nick, title: title, body: body, turnstileToken: ts.value })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.d || !res.d.ok) throw new Error((res.d && res.d.error) || '发布失败');
+        document.getElementById('done__text').textContent = '《' + title + '》已经建好了。';
+        document.getElementById('done__gh').href = res.d.url;
+        form.hidden = true;
+        document.getElementById('done').hidden = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .catch(function (err) {
+        setNote(err.message || '发布失败，稍后再试');
+        if (window.turnstile) window.turnstile.reset();
+      })
+      .then(function () { btn.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>
