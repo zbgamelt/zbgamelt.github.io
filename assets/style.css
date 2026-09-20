@@ -205,6 +205,8 @@ main { padding: 46px 0 72px; }
   display: flex; flex-wrap: wrap; gap: 2px; padding: 8px 10px; margin: 0 0 12px;
   background: var(--card); border: 1px solid var(--border); border-radius: 14px;
 }
+/* 作者样式里的 display 会盖掉 [hidden] 的 display:none，必须显式补一条 */
+.emoji-strip[hidden] { display: none; }
 .emoji-strip__i { padding: 4px; background: none; border: none; font-size: 19px; line-height: 1; cursor: pointer; border-radius: 8px; }
 .emoji-strip__i:hover { background: var(--card-2); }
 
