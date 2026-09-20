@@ -34,6 +34,8 @@ jobs:
         with:
           node-version: '20'
 
+      # 发布闸门：build.mjs 会自检产物里每一段内联 <script> 能否被 JS 解析器解析，
+      # 语法坏了就非 0 退出，后面的「提交生成结果」不会执行，坏页面进不了 main。
       - name: 生成静态页面
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

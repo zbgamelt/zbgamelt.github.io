@@ -11,6 +11,7 @@
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_FULL = process.env.GITHUB_REPOSITORY || 'zbgamelt/zbgamelt.github.io';
@@ -778,10 +779,99 @@ function assertNoNestedAnchors(html, label) {
   }
 }
 
+/**
+ * 内联脚本自检：产物里每一段 <script>…</script>（不含 src 外链）都必须能过 JS 解析器。
+ *
+ * 防的是「模板字面量吞转义」这类静默事故：源码里写
+ *   replace(/\/(new-post|api)\/?$/, '')
+ * 模板字符串会把 `\/` 退化成 `/`，产物变成
+ *   replace(//(new-post|api)/?$/, '')
+ * `//` 起注释，整段脚本语法错误、页面上所有按钮失灵 —— 而 grep 产物完全看不出来
+ * （历史事故：commit f9963f9）。所以这里不靠 grep，直接交给解析器。
+ */
+const SCRIPT_BLOCK = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+
+function inlineScripts(html) {
+  const out = [];
+  SCRIPT_BLOCK.lastIndex = 0;
+  let m;
+  while ((m = SCRIPT_BLOCK.exec(html)) !== null) {
+    if (/\bsrc\s*=/i.test(m[1])) continue; // 外链脚本，不归我们解析
+    if (!m[2].trim()) continue;
+    out.push(m[2]);
+  }
+  return out;
+}
+
+/** 报错时只贴出错行附近几行，别把整段脚本糊到 CI 日志里 */
+function codeExcerpt(code, line) {
+  const lines = code.split('\n');
+  const at = Number(line) >= 1 ? Number(line) : 1;
+  const start = Math.max(1, at - 3);
+  const end = Math.min(lines.length, at + 3);
+  const out = [];
+  for (let i = start; i <= end; i++) {
+    out.push(`      ${String(i).padStart(4)} |${i === at ? '>>' : '  '} ${lines[i - 1]}`);
+  }
+  return `    出错片段（该段共 ${lines.length} 行）：\n${out.join('\n')}`;
+}
+
+function assertInlineScriptsParse(html, label) {
+  const blocks = inlineScripts(html);
+  blocks.forEach((code, i) => {
+    const where = `${label} 内联 <script> #${i + 1}`;
+
+    // ① 先扫一眼就假的残骸（高准确率，能直接指到出错的哪一行）
+    const wreck = /(?<!:)\/\/\(/.exec(code);
+    if (wreck) {
+      const line = code.slice(0, wreck.index).split('\n').length;
+      throw new Error(
+        `${where} 出现注释残骸 "//("：正则里的 \\/ 被模板字面量吃掉了（\\/ 等价于 /）。\n` +
+          `    把带反斜杠的逻辑挪到模板外先算好（参考 renderCompose 里 apiBase 的写法）。\n` +
+          codeExcerpt(code, line)
+      );
+    }
+    const trail = /\\[ \t]*\r?\n/.exec(code);
+    if (trail) {
+      const line = code.slice(0, trail.index).split('\n').length;
+      throw new Error(
+        `${where} 出现行尾裸反斜杠（残留转义），检查模板字面量里的反斜杠。\n` +
+          codeExcerpt(code, line)
+      );
+    }
+
+    // ② 硬性检查：能解析。失败即构建失败。
+    try {
+      new vm.Script(code, { filename: where });
+    } catch (err) {
+      const line = /(\d+)\s*$/.exec((err.stack || '').split('\n')[0] || '')?.[1];
+      throw new Error(
+        `${where} 无法解析（语法错误）：${err.message}\n` +
+          `    模板字面量里的 \\/ 等价于 /，写进 <script> 就变成注释。请把带反斜杠的逻辑\n` +
+          `    挪到模板外先算好（参考 renderCompose 里 apiBase 的写法）。\n` +
+          codeExcerpt(code, line)
+      );
+    }
+  });
+  return blocks.length;
+}
+
+/** 构建收尾：把落盘的产物再读回来过一遍，确认写出来的东西是好的 */
+function verifyGeneratedPages() {
+  let scripts = 0;
+  for (const rel of pages) {
+    const html = readFileSync(join(ROOT, rel), 'utf8');
+    assertNoNestedAnchors(html, rel);
+    scripts += assertInlineScriptsParse(html, rel);
+  }
+  return scripts;
+}
+
 const pages = [];
 
 function writePage(relPath, html, label) {
   assertNoNestedAnchors(html, label || relPath);
+  assertInlineScriptsParse(html, label || relPath);
   const full = join(ROOT, relPath);
   mkdirSync(dirname(full), { recursive: true });
   writeFileSync(full, html);
@@ -824,6 +914,10 @@ async function main() {
   writePage(join('search', 'index.html'), renderSearch(discussions), 'search/index.html');
   writeFileSync(join(ROOT, '.nojekyll'), '');
   mkdirSync(join(ROOT, 'assets'), { recursive: true });
+
+  // 收尾自检：产物里任何一段内联 <script> 解析不了就非 0 退出，拦下这次推送/提交
+  const scriptCount = verifyGeneratedPages();
+  console.log(`✓ 自检通过：${pages.length} 个页面 / ${scriptCount} 段内联脚本全部可解析`);
 
   console.log(`✓ 生成 ${pages.length} 个页面（数据源：${source}）→ ${ROOT}`);
   if (source === 'sample') console.log('  （样例数据，线上不会被用到）');
