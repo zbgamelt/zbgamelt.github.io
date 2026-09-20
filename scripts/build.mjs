@@ -27,34 +27,24 @@ const TZ = 'Asia/Shanghai';
 
 // ────────────────────────────────────────── 数据
 
-/**
- * upvoteCount 就是 GitHub 上的「↑ 赞数」，评论行要显示它。
- * 这个字段万一不可用（或 token 权限不够），自动退化成不带赞数的查询：
- * 宁可少显示一个赞数，也不能让整站构建挂掉。
- */
-function discussionsQuery(withUpvotes) {
-  const uv = withUpvotes ? ' upvoteCount' : '';
-  return `query($owner:String!, $name:String!, $cursor:String) {
+async function fetchDiscussions() {
+  const query = `query($owner:String!, $name:String!, $cursor:String) {
     repository(owner:$owner, name:$name) {
       discussions(first:50, after:$cursor, orderBy:{field:UPDATED_AT, direction:DESC}) {
         totalCount
         pageInfo { hasNextPage endCursor }
         nodes {
-          number title url createdAt updatedAt bodyHTML${uv}
+          number title url createdAt updatedAt bodyHTML
           author { login url avatarUrl }
           category { name emoji }
           comments(first:50) {
             totalCount
-            nodes { createdAt bodyHTML isAnswer${uv} author { login url avatarUrl } }
+            nodes { createdAt bodyHTML isAnswer author { login url avatarUrl } }
           }
         }
       }
     }
   }`;
-}
-
-async function fetchDiscussions() {
-  let query = discussionsQuery(true);
   const all = [];
   let cursor = null;
   for (let page = 0; page < 10; page++) {
@@ -68,16 +58,6 @@ async function fetchDiscussions() {
       body: JSON.stringify({ query, variables: { owner: OWNER, name: NAME, cursor } }),
     });
     const json = await res.json();
-    // 只在「因为 upvoteCount 被拒」时降级重试；其它 GraphQL 报错照旧抛出去
-    if (
-      json.errors &&
-      query.includes('upvoteCount') &&
-      /upvoteCount|Cannot query field/i.test(JSON.stringify(json.errors))
-    ) {
-      console.log('! upvoteCount 字段不可用，退化成不带赞数的查询重试');
-      query = discussionsQuery(false);
-      continue;
-    }
     if (json.errors) throw new Error(`GraphQL: ${JSON.stringify(json.errors)}`);
     const d = json.data?.repository?.discussions;
     if (!d) throw new Error('拿不到 discussions（仓库可能还没开启 Discussions）');
@@ -244,7 +224,7 @@ function authorName(a, linked = true) {
  * 后端会往正文末尾追一行「> 由 **昵称** 通过论坛页面发布 · 时间」，
  * 这里把昵称捞出来当发帖人显示，否则全站帖子都会挂着仓库主的名字。
  */
-const WEB_POST_RE = /由\s*(.{1,24}?)\s*通过论坛页面(?:发布|回复)/;
+const WEB_POST_RE = /由\s*(.{1,24}?)\s*通过论坛页面发布/;
 
 function webAuthor(d) {
   const m = WEB_POST_RE.exec(text(d.bodyHTML || ''));
@@ -418,46 +398,56 @@ function catEmoji(emoji) {
   return e;
 }
 
-/**
- * 一条评论：
- *   第一行 头像 + 用户名（时间靠右）
- *   第二行 评论内容
- *   第三行 左「↑ 赞数 / 表情」  右「回复」
- */
-function commentRow(c, i) {
-  const up = Number(c.upvoteCount ?? 0) || 0;
-  const nick = authorText(c);
-  return `    <article class="cmt" id="c${i + 1}">
-      <header class="cmt__head">
-        ${avatar(c.author, 28)}
-        <span class="cmt__name">${esc(nick)}</span>
-        ${c.isAnswer ? '<span class="badge">已采纳</span>' : ''}
-        <time datetime="${esc(c.createdAt)}">${esc(fmtDate(c.createdAt))}</time>
-      </header>
-      <div class="md cmt__body">${sanitize(c.bodyHTML)}</div>
-      <footer class="cmt__foot">
-        <span class="cmt__tools">
-          <span class="cmt__up" title="GitHub 上收到的赞">↑ ${up}</span>
-          <button class="cmt__emoji" type="button" aria-label="选表情">😊</button>
-        </span>
-        <button class="cmt__reply" type="button" data-reply="${esc(nick)}">回复</button>
-      </footer>
-    </article>`;
+function giscusWidget(d) {
+  const g = SITE.giscus;
+  if (!g?.repo || !g?.repoId || !g?.categoryId) return '';
+  return `    <div class="giscus"></div>
+    <script src="https://giscus.app/client.js"
+      data-repo="${esc(g.repo)}"
+      data-repo-id="${esc(g.repoId)}"
+      data-category="${esc(g.category || '')}"
+      data-category-id="${esc(g.categoryId)}"
+      data-mapping="${esc(g.mapping || 'number')}"
+      data-term="${esc(String(d.number))}"
+      data-reactions-enabled="${esc(g.reactionsEnabled || '1')}"
+      data-emit-metadata="0"
+      data-input-position="${esc(g.inputPosition || 'bottom')}"
+      data-theme="${esc(g.theme || 'dark')}"
+      data-lang="${esc(g.lang || 'zh-CN')}"
+      data-loading="lazy"
+      crossorigin="anonymous"
+      async></script>`;
 }
 
 /**
- * 帖子页：标题栏（返回键 + 帖子标题）→ 正文 → 评论数 → 输入框 → 评论列表。
- * 原本这里挂的是 giscus（第三方 iframe，要求登录 GitHub 才能评论），
- * 玩家不可能为了一条评论去注册 GitHub，所以改成自绘评论列表。
- * 发表走的还是自家 Worker（forum-api），没有配 api 时输入框会明说“正在接通”。
+ * 帖子页：标题栏（返回键 + 居中标题）→ 正文 → 回复区。
+ * 回复区保持原样（giscus 托管组件 + <noscript> 静态兜底）：
+ * giscus 是第三方 iframe，样式改不了、且要登录 GitHub 才能评论，
+ * 这点已跟用户确认，用户选择恢复原样。
  */
 function renderThread(d) {
   const comments = (d.comments?.nodes ?? [])
     .slice()
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  const rows = comments.map((c, i) => commentRow(c, i)).join('\n');
-  const p = SITE.post || {};
-  const canComment = Boolean(p.comment && p.turnstileSitekey);
+  const staticReplies = comments
+    .map(
+      (c) => `    <article class="reply${c.isAnswer ? ' reply--answer' : ''}">
+      <header class="reply__head">
+        ${avatar(c.author, 34)}
+        <div class="post__who">
+          ${authorName(c.author)}
+          <time datetime="${esc(c.createdAt)}">${esc(fmtDate(c.createdAt))}</time>
+        </div>
+        ${c.isAnswer ? '<span class="badge">已采纳</span>' : ''}
+      </header>
+      <div class="md">${sanitize(c.bodyHTML)}</div>
+    </article>`,
+    )
+    .join('\n');
+  const giscus = giscusWidget(d);
+  const repliesBlock = giscus
+    ? `${giscus}\n    <noscript>\n${staticReplies}\n    </noscript>`
+    : staticReplies;
   const body = `  <header class="tbar">
     <a class="tbar__back" href="../../" aria-label="返回话题列表"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
     <h1 class="tbar__title">${esc(d.title)}</h1>
@@ -471,142 +461,21 @@ function renderThread(d) {
     </div>
     <div class="md post__body">${sanitize(d.bodyHTML)}</div>
   </article>
-  <section class="cmts">
-    <h2 class="cmts__title">评论 <span id="ccount">${comments.length}</span></h2>
-    <div class="cbox">
-      <button class="cbox__emoji" type="button" id="cbe" aria-label="选表情">😊</button>
-      <input class="cbox__input" id="cinput" type="text" placeholder="说点什么…" maxlength="500" autocomplete="off">
-      <button class="cbox__send" type="button" id="csend">发送</button>
-    </div>
-    <div class="emoji-strip" id="estrip" hidden></div>
-${canComment ? `    <div class="cbox__human" id="chuman" hidden><div class="cf-turnstile" data-sitekey="${esc(p.turnstileSitekey)}" data-theme="dark" data-language="zh-cn"></div></div>\n` : ''}    <p class="cbox__hint" id="chint" hidden></p>
-    <div class="cmts__list" id="clist">
-${rows}
-    </div>
-${comments.length === 0 ? '    <p class="cmts__none">还没有人评论，你可以是第一个。</p>\n' : ''}  </section>`;
-  const script = `<script>
-(function () {
-  // 相对时间在浏览器里算，避免每次构建都因为“多久之前”变了而提交一次
-  function ago(iso) {
-    var t = new Date(iso).getTime();
-    if (isNaN(t)) return null;
-    var m = Math.round((Date.now() - t) / 60000);
-    if (m < 1) return '刚刚';
-    if (m < 60) return m + ' 分钟前';
-    var h = Math.round(m / 60);
-    if (h < 24) return h + ' 小时前';
-    var dd = Math.round(h / 24);
-    if (dd < 30) return dd + ' 天前';
-    var mo = Math.round(dd / 30);
-    if (mo < 12) return mo + ' 个月前';
-    return Math.round(mo / 12) + ' 年前';
-  }
-  Array.prototype.forEach.call(document.querySelectorAll('.cmt__head time[datetime]'), function (el) {
-    var rel = ago(el.getAttribute('datetime'));
-    if (rel) el.textContent = rel;
-  });
-
-  var input = document.getElementById('cinput');
-  var sendBtn = document.getElementById('csend');
-  var hint = document.getElementById('chint');
-  var strip = document.getElementById('estrip');
-  var human = document.getElementById('chuman');
-  var API = ${JSON.stringify(p.comment || '')};
-  var NUM = ${Number(d.number)};
-
-  var EMOJIS = ['😀','😄','😁','😂','🤣','😊','😍','🤔','😅','😭','😡','🥲','👍','👎','🙏','🎉','❤️','🔥','⭐','🐟','☕','😴'];
-  if (strip) {
-    strip.innerHTML = EMOJIS.map(function (e) {
-      return '<button type="button" class="emoji-strip__i">' + e + '</button>';
-    }).join('');
-    Array.prototype.forEach.call(strip.children, function (b) {
-      b.addEventListener('click', function () { insert(b.textContent); });
-    });
-  }
-  function insert(txt) {
-    if (!input) return;
-    var s = input.selectionStart == null ? input.value.length : input.selectionStart;
-    var e = input.selectionEnd == null ? input.value.length : input.selectionEnd;
-    input.value = input.value.slice(0, s) + txt + input.value.slice(e);
-    input.focus();
-    input.selectionStart = input.selectionEnd = s + txt.length;
-  }
-  function toggleStrip() { if (strip) strip.hidden = !strip.hidden; }
-  function focusInput() {
-    if (!input) return;
-    input.focus();
-    try { input.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
-  }
-  function say(msg) {
-    if (!hint) return;
-    if (!msg) { hint.hidden = true; hint.textContent = ''; return; }
-    hint.textContent = msg;
-    hint.hidden = false;
-  }
-  function nick() {
-    try { return localStorage.getItem('forumNick') || ''; } catch (e) { return ''; }
-  }
-
-  // 「回复」：把 @对方 预填进输入框；「😊」：展开表情条往评论里插表情
-  Array.prototype.forEach.call(document.querySelectorAll('.cmt__reply'), function (b) {
-    b.addEventListener('click', function () {
-      if (!input) return;
-      input.value = '回复 @' + (b.getAttribute('data-reply') || '') + '：';
-      focusInput();
-      say('');
-    });
-  });
-  Array.prototype.forEach.call(document.querySelectorAll('.cmt__emoji'), function (b) {
-    b.addEventListener('click', function () { toggleStrip(); focusInput(); });
-  });
-  var cbe = document.getElementById('cbe');
-  if (cbe) cbe.addEventListener('click', function () { toggleStrip(); if (input) input.focus(); });
-
-  function submit() {
-    if (!input) return;
-    var text = input.value.trim();
-    if (!text) { focusInput(); return; }
-    if (!API) { say('评论接口正在接通中 —— 先点右上「在 GitHub 查看」去那边评论。'); return; }
-    if (text.length < 2) { say('多写两个字吧'); return; }
-    var ts = document.querySelector('[name="cf-turnstile-response"]');
-    var token = ts ? ts.value : '';
-    if (!token) {
-      if (human) human.hidden = false;
-      say('第一次评论过一下人机验证，点一下下面的框再发送');
-      return;
-    }
-    if (sendBtn) sendBtn.disabled = true;
-    say('发送中…');
-    fetch(API, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ number: NUM, nickname: nick(), body: text, turnstileToken: token }),
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }).catch(function () { return { ok: false, j: {} }; }); })
-      .then(function (res) {
-        if (sendBtn) sendBtn.disabled = false;
-        if (window.turnstile) window.turnstile.reset();
-        if (!res.ok) { say(res.j.error || '发送失败，稍后再试'); return; }
-        input.value = '';
-        say('已提交，刷新页面就能看到你的评论。');
-      })
-      .catch(function () {
-        if (sendBtn) sendBtn.disabled = false;
-        say('网络不太顺，稍后再试');
-      });
-  }
-  if (sendBtn) sendBtn.addEventListener('click', submit);
-  if (input) input.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); submit(); }
-  });
-  if (!API) say('评论功能正在接通中 —— 先点右上「在 GitHub 查看」去那边评论。');
-})();
-</script>${canComment ? '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>' : ''}`;
+  <section class="replies">
+    <h2 class="replies__title">回复 <span>${comments.length}</span></h2>
+${repliesBlock}
+${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人回复，你可以是第一个。</p>' : ''}
+  </section>
+  <section class="cta">
+    ${giscus
+      ? `<p class="cta__hint">用 GitHub 账号登录后可直接在本页评论；你在 GitHub 里发的回复也会同步到这儿。 <a href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上看这条讨论</a></p>`
+      : `<a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上回复</a>
+    <p class="cta__hint">回复需要 GitHub 账号；你在 Discussions 里的发言稍后会自动同步到本页。</p>`}
+  </section>`;
   return shell({
     title: `${d.title} — ${SITE.name}`,
     description: truncate(text(d.bodyHTML), 140),
     body,
-    script,
     base: '../../',
     pageClass: 'page-thread',
   });
