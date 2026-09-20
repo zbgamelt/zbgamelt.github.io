@@ -287,8 +287,7 @@ function emptyState() {
     <p>论坛的帖子都住在 GitHub Discussions 里，第一贴要不你来开个头？</p>
     <a class="btn" href="post/">去发第一帖</a>
     <p class="empty__hint">不需要 GitHub 账号 · 发完几分钟内会自动同步到这里</p>
-  </section>
-`;
+  </section>`;
 }
 
 function renderIndex(discussions) {
@@ -450,9 +449,10 @@ function renderThread(d) {
     : staticReplies;
   const body = `  <header class="tbar">
     <a class="tbar__back" href="../../" aria-label="返回话题列表"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
-    <h1 class="tbar__title">${esc(d.title)}</h1>
+    <div class="tbar__label">帖子</div>
   </header>
   <article class="post">
+    <h1 class="post__title">${esc(d.title)}</h1>
     <div class="post__meta">
       ${avatar(d.author, 24)}
       ${authorLabel(d)}
@@ -466,18 +466,14 @@ function renderThread(d) {
 ${repliesBlock}
 ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人回复，你可以是第一个。</p>' : ''}
   </section>
-  <section class="cta">
-    ${giscus
-      ? `<p class="cta__hint">用 GitHub 账号登录后可直接在本页评论；你在 GitHub 里发的回复也会同步到这儿。 <a href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上看这条讨论</a></p>`
-      : `<a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上回复</a>
-    <p class="cta__hint">回复需要 GitHub 账号；你在 Discussions 里的发言稍后会自动同步到本页。</p>`}
-  </section>`;
+`;
   return shell({
     title: `${d.title} — ${SITE.name}`,
     description: truncate(text(d.bodyHTML), 140),
     body,
     base: '../../',
     pageClass: 'page-thread',
+    fab: false,   // 帖子页不要发布悬浮球
   });
 }
 

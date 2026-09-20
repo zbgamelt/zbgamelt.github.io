@@ -164,7 +164,7 @@ main { padding: 46px 0 72px; }
   width: 34px; height: 34px; margin-left: -8px; border-radius: 10px; color: var(--text);
 }
 .tbar__back:hover { background: var(--card-2); color: var(--text-strong); }
-.tbar__title {
+.tbar__label {
   flex: 1; margin: 0 26px 0 0; font-size: 16px; font-weight: 600; line-height: 1.4;
   color: var(--text-strong); text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -174,6 +174,9 @@ main { padding: 46px 0 72px; }
 .page-thread .top { display: none; }
 .page-thread main { padding-top: 0; }
 .page-thread .tbar { top: 0; }
+
+/* 第二行：帖子标题（在标题栏分割线之下） */
+.post__title { margin: 0 0 14px; font-size: 21px; line-height: 1.4; font-weight: 650; color: var(--text-strong); letter-spacing: -.01em; overflow-wrap: anywhere; }
 
 /* 正文：无外框、紧贴 */
 .post { padding: 0 0 20px; border-bottom: 1px solid var(--border); }
@@ -199,8 +202,6 @@ main { padding: 46px 0 72px; }
 .reply__head { padding-bottom: 14px; margin-bottom: 14px; }
 .post__who { display: flex; flex-direction: column; line-height: 1.45; min-width: 0; flex: 1; }
 .post__who time { color: var(--muted); font-size: 12.5px; }
-.cta { margin-top: 32px; text-align: center; }
-.cta__hint { margin: 14px 0 0; color: var(--muted); font-size: 12.5px; }
 
 .badge {
   flex: none; padding: 3px 10px; border-radius: 999px; font-size: 11.5px;
@@ -246,7 +247,8 @@ main { padding: 46px 0 72px; }
   main { padding: 30px 0 56px; }
   .thread { padding: 14px 0; }
   .reply { padding: 16px; }
-  .tbar__title { font-size: 15px; }
+  .tbar__label { font-size: 15px; }
+  .post__title { font-size: 19px; }
   .top__inner { min-height: 52px; }
   .fab { right: 16px; bottom: 16px; }
 }
