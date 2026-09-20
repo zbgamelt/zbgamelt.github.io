@@ -343,10 +343,59 @@ ${list.map((d) => threadRow(d, '')).join('\n')}
   });
 }
 
+/**
+ * giscus 嵌入（评论用）。
+ * 用 mapping="number" + data-term=<讨论编号>：giscus 会直接走
+ * GraphQL 的 discussion(number:) 精确取那一条，不走标题模糊搜索，
+ * 所以不会串帖，也不需要嵌入 discussion 的 node ID。
+ * （属性名是 data-term，不是 data-discussion —— 以 client.js loader 源码为准。）
+ */
+function giscusWidget(d) {
+  const g = SITE.giscus;
+  if (!g?.repo || !g?.repoId || !g?.categoryId) return '';
+  return `    <div class="giscus"></div>
+    <script src="https://giscus.app/client.js"
+      data-repo="${esc(g.repo)}"
+      data-repo-id="${esc(g.repoId)}"
+      data-category="${esc(g.category || '')}"
+      data-category-id="${esc(g.categoryId)}"
+      data-mapping="${esc(g.mapping || 'number')}"
+      data-term="${esc(String(d.number))}"
+      data-reactions-enabled="${esc(g.reactionsEnabled || '1')}"
+      data-emit-metadata="0"
+      data-input-position="${esc(g.inputPosition || 'bottom')}"
+      data-theme="${esc(g.theme || 'dark')}"
+      data-lang="${esc(g.lang || 'zh-CN')}"
+      data-loading="lazy"
+      crossorigin="anonymous"
+      async></script>`;
+}
+
 function renderThread(d) {
   const comments = (d.comments?.nodes ?? [])
     .slice()
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const staticReplies = comments
+    .map(
+      (c) => `    <article class="reply${c.isAnswer ? ' reply--answer' : ''}">
+      <header class="reply__head">
+        ${avatar(c.author, 34)}
+        <div class="post__who">
+          ${authorName(c.author)}
+          <time datetime="${esc(c.createdAt)}">${esc(fmtDate(c.createdAt))}</time>
+        </div>
+        ${c.isAnswer ? '<span class="badge">已采纳</span>' : ''}
+      </header>
+      <div class="md">${sanitize(c.bodyHTML)}</div>
+    </article>`,
+    )
+    .join('\n');
+  // 开了 giscus 就由它接管回复区（实时、能直接在本页发），
+  // 静态回复放进 <noscript> 兜底：不重复显示，但没 JS 时依然读得到。
+  const giscus = giscusWidget(d);
+  const repliesBlock = giscus
+    ? `${giscus}\n    <noscript>\n${staticReplies}\n    </noscript>`
+    : staticReplies;
   const body = `  <nav class="crumb"><a href="../../">← 全部话题</a></nav>
   <article class="post">
     <div class="thread__top">
@@ -366,26 +415,14 @@ function renderThread(d) {
   </article>
   <section class="replies">
     <h2 class="replies__title">回复 <span>${comments.length}</span></h2>
-${comments
-  .map(
-    (c) => `    <article class="reply${c.isAnswer ? ' reply--answer' : ''}">
-      <header class="reply__head">
-        ${avatar(c.author, 34)}
-        <div class="post__who">
-          ${authorName(c.author)}
-          <time datetime="${esc(c.createdAt)}">${esc(fmtDate(c.createdAt))}</time>
-        </div>
-        ${c.isAnswer ? '<span class="badge">已采纳</span>' : ''}
-      </header>
-      <div class="md">${sanitize(c.bodyHTML)}</div>
-    </article>`,
-  )
-  .join('\n')}
-${comments.length === 0 ? '    <p class="replies__none">还没有人回复，你可以是第一个。</p>' : ''}
+${repliesBlock}
+${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人回复，你可以是第一个。</p>' : ''}
   </section>
   <section class="cta">
-    <a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上回复</a>
-    <p class="cta__hint">回复需要 GitHub 账号；你在 Discussions 里的发言稍后会自动同步到本页。</p>
+    ${giscus
+      ? `<p class="cta__hint">用 GitHub 账号登录后可直接在本页评论；你在 GitHub 里发的回复也会同步到这儿。 <a href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上看这条讨论</a></p>`
+      : `<a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上回复</a>
+    <p class="cta__hint">回复需要 GitHub 账号；你在 Discussions 里的发言稍后会自动同步到本页。</p>`}
   </section>`;
   return shell({
     title: `${d.title} — ${SITE.name}`,

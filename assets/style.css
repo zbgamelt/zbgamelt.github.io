@@ -230,3 +230,8 @@ main { padding: 46px 0 72px; }
   .reply { padding: 16px; }
   .top__inner { min-height: 66px; }
 }
+
+/* giscus 评论区：iframe 高度由 giscus 自己 postMessage 调整 */
+.giscus { margin-top: 2px; }
+.giscus-frame { width: 100%; border: none; }
+
