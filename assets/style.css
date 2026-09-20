@@ -185,6 +185,14 @@ main { padding: 46px 0 72px; }
 }
 .post__title::-webkit-scrollbar { display: none; }
 
+/* 帖子页：分隔线铺满整屏，内容仍保持内缩（.wrap 左右各 22px） */
+.page-thread .tbar,
+.page-thread .post,
+.page-thread .post__title {
+  margin-left: -22px; margin-right: -22px;
+  padding-left: 22px; padding-right: 22px;
+}
+
 /* 正文：无外框、紧贴 */
 .post { padding: 0 0 20px; border-bottom: 1px solid var(--border); }
 .post__meta { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; color: var(--muted); font-size: 12.5px; }
