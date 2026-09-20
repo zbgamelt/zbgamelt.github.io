@@ -15,7 +15,6 @@
   },
   "post": {
     "api": "https://forum-api.zbgame.bid",
-    "turnstileSitekey": "0x4AAAAAAE9lJ4BNvsdgW4VJ",
     "cooldownSeconds": 120,
     "dailyCap": 30
   }

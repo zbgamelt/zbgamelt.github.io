@@ -527,7 +527,7 @@ function apiBaseOf(p) {
 /**
  * 发新帖页。写权限在 Cloudflare Worker 那边（forum-api.zbgame.bid），
  * 本站依然是纯静态，页面里没有任何凭据。
- * 人机验证用 Turnstile（无感，可疑流量才会显示复选框）。
+ * 发帖必须先登录 GitHub（站内 OAuth，会话号放在 URL 片段里，Cookie 带不过去）。
  */
 function renderCompose() {
   const p = SITE.post;
