@@ -1,6 +1,27 @@
 {
   "discussions": [
     {
+      "number": 2,
+      "title": "这是一条端到端测试帖，稍后会删掉",
+      "url": "https://github.com/zbgamelt/zbgamelt.github.io/discussions/2",
+      "createdAt": "2026-09-20T07:26:37Z",
+      "updatedAt": "2026-09-20T07:26:37Z",
+      "bodyHTML": "<p dir=\"auto\">测试发帖链路：浏览器 → Cloudflare Worker → GitHub Discussions。看到这条就说明链路是通的，我会把它删掉。</p>\n<hr>\n<blockquote>\n<p dir=\"auto\">由 <strong>联调测试</strong> 通过论坛页面发布 · 2026-09-20 07:26 UTC</p>\n</blockquote>",
+      "author": {
+        "login": "zbgamelt",
+        "url": "https://github.com/zbgamelt",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
+      },
+      "category": {
+        "name": "General",
+        "emoji": ":speech_balloon:"
+      },
+      "comments": {
+        "totalCount": 0,
+        "nodes": []
+      }
+    },
+    {
       "number": 1,
       "title": "Welcome to zbgamelt.github.io Discussions!",
       "url": "https://github.com/zbgamelt/zbgamelt.github.io/discussions/1",
