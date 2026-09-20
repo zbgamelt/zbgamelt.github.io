@@ -12,7 +12,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%230b0c0e%22%2F%3E%3Cpath%20d%3D%22M8%2010.5h16v9a2%202%200%200%201-2%202h-8l-4.5%203.5V21.5H10a2%202%200%200%201-2-2z%22%20fill%3D%22%23ffd83d%22%2F%3E%3C%2Fsvg%3E">
 <link rel="stylesheet" href="assets/style.css">
 </head>
-<body class="">
+<body class="page-index">
 <a class="skip" href="#main">跳到内容</a>
 <header class="top">
   <div class="wrap top__inner">
@@ -21,50 +21,28 @@
   </div>
 </header>
 <main id="main" class="wrap">
-  <section class="hero">
-    <div class="chips" role="group" aria-label="按板块筛选">
-      <button class="chip chip--btn is-active" data-cat="*">全部</button>
-      <button class="chip chip--btn" data-cat="General">General</button>
-      <button class="chip chip--btn" data-cat="Announcements">Announcements</button>
-    </div>
-  </section>
+  <nav class="tabs" aria-label="排序">
+    <button class="tab is-active" type="button" data-sort="new" aria-pressed="true">最新</button>
+    <button class="tab" type="button" data-sort="old" aria-pressed="false">最早</button>
+  </nav>
   <section class="list" id="list">
-    <a class="thread" href="t/3/" data-cat="General">
-      <div class="thread__body">
-        <div class="thread__top">
-          <span class="chip">💬 General</span>
-          <span class="thread__num">#3</span>
-        </div>
-        <h2 class="thread__title">1111111111</h2>
-        <p class="thread__excerpt">111111111 由 11111111111 通过论坛页面发布 · 2026-09-20 07:32 UTC</p>
-        <div class="thread__meta">
-          <img class="avatar" style="--s:22px" src="https://avatars.githubusercontent.com/u/297119334?v=4&s=44" width="22" height="22" alt="" loading="lazy">
-          <span class="author">11111111111</span><span class="srcmark" title="通过论坛页面发布">网页</span>
-          <span class="dot">·</span>
-          <time datetime="2026-09-20T07:32:51Z" title="2026/09/20 15:32">2026/09/20 15:32</time>
-        </div>
+    <a class="thread" href="t/3/" data-cat="General" data-ts="1789889571000">
+      <h2 class="thread__title">1111111111</h2>
+      <p class="thread__excerpt">111111111 由 11111111111 通过论坛页面发布 · 2026-09-20 07:32 UTC</p>
+      <div class="thread__meta">
+        <span class="author">11111111111</span><span class="srcmark" title="通过论坛页面发布">网页</span>
+        <time datetime="2026-09-20T07:32:51Z" title="2026/09/20 15:32">2026/09/20 15:32</time>
       </div>
-      <div class="thread__count" aria-label="0 条回复"><strong>0</strong><span>回复</span></div>
     </a>
-    <a class="thread" href="t/1/" data-cat="Announcements">
-      <div class="thread__body">
-        <div class="thread__top">
-          <span class="chip">📣 Announcements</span>
-          <span class="thread__num">#1</span>
-        </div>
-        <h2 class="thread__title">Welcome to zbgamelt.github.io Discussions!</h2>
-        <p class="thread__excerpt">👋 Welcome! We’re using Discussions as a place to connect with other members of our community.…</p>
-        <div class="thread__meta">
-          <img class="avatar" style="--s:22px" src="https://avatars.githubusercontent.com/u/297119334?v=4&s=44" width="22" height="22" alt="" loading="lazy">
-          <span class="author">zbgamelt</span>
-          <span class="dot">·</span>
-          <time datetime="2026-09-20T06:58:01Z" title="2026/09/20 14:58">2026/09/20 14:58</time>
-        </div>
+    <a class="thread" href="t/1/" data-cat="Announcements" data-ts="1789887481000">
+      <h2 class="thread__title">Welcome to zbgamelt.github.io Discussions!</h2>
+      <p class="thread__excerpt">👋 Welcome! We’re using Discussions as a place to connect with other members of our community.…</p>
+      <div class="thread__meta">
+        <span class="author">zbgamelt</span>
+        <time datetime="2026-09-20T06:58:01Z" title="2026/09/20 14:58">2026/09/20 14:58</time>
       </div>
-      <div class="thread__count" aria-label="1 条回复"><strong>1</strong><span>回复</span></div>
     </a>
   </section>
-  <p class="noresult" id="noresult" hidden>没有匹配的话题，换个词试试？</p>
 </main>
 <a class="fab" href="post/" aria-label="发新帖" title="发新帖"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8.75 2.5v4.75H13.5v1.5H8.75v4.75h-1.5V8.75H2.5v-1.5h4.75V2.5z"/></svg></a>
 <script>
@@ -90,24 +68,26 @@
     if (rel) el.textContent = rel;
   });
 
-  var items = Array.prototype.slice.call(document.querySelectorAll('.thread'));
-  var btns = Array.prototype.slice.call(document.querySelectorAll('.chip--btn'));
-  var noresult = document.getElementById('noresult');
-  var cat = '*';
-  function apply() {
-    var shown = 0;
-    items.forEach(function (el) {
-      var ok = cat === '*' || el.dataset.cat === cat;
-      el.hidden = !ok;
-      if (ok) shown++;
-    });
-    if (noresult) noresult.hidden = shown > 0;
-  }
-  btns.forEach(function (b) {
-    b.addEventListener('click', function () {
-      cat = b.dataset.cat;
-      btns.forEach(function (o) { o.classList.toggle('is-active', o === b); });
-      apply();
+  // 排序：按卡片上的 data-ts 重排 DOM，不刷新页面
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var list = document.getElementById('list');
+  if (!list) return;
+  var rows = Array.prototype.slice.call(list.children);
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (o) {
+        var on = o === t;
+        o.classList.toggle('is-active', on);
+        o.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      rows
+        .slice()
+        .sort(function (a, b) {
+          var x = +a.dataset.ts || 0;
+          var y = +b.dataset.ts || 0;
+          return t.dataset.sort === 'old' ? x - y : y - x;
+        })
+        .forEach(function (el) { list.appendChild(el); });
     });
   });
 })();
