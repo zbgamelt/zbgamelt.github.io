@@ -235,3 +235,43 @@ main { padding: 46px 0 72px; }
 .giscus { margin-top: 2px; }
 .giscus-frame { width: 100%; border: none; }
 
+/* ── 发新帖入口 ───────────────────────── */
+.top__post { color: var(--accent) !important; font-weight: 650; }
+.hero__cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 0; }
+.hero__cta .btn { padding: 10px 22px; font-size: 14.5px; }
+.hero__note { color: #6b727c; font-size: 12.5px; }
+
+/* 网页发布的署名标记 */
+.srcmark {
+  display: inline-block; margin-left: 5px; padding: 1px 6px;
+  border: 1px solid var(--border); border-radius: 999px;
+  font-size: 10.5px; color: #8b929c; vertical-align: 1px;
+}
+
+/* ── 发新帖页 ───────────────────────── */
+.compose { max-width: 680px; }
+.compose h1 { margin: 0 0 8px; font-size: 24px; color: var(--text-strong); font-weight: 650; }
+.compose__sub { margin: 0 0 28px; color: var(--muted); font-size: 14px; }
+.form { display: flex; flex-direction: column; gap: 20px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field__label { font-size: 13.5px; color: var(--text-strong); font-weight: 600; }
+.field__label i { font-style: normal; font-weight: 400; color: #6b727c; font-size: 12px; }
+.field input, .field textarea {
+  width: 100%; box-sizing: border-box;
+  padding: 12px 14px; border-radius: 10px;
+  background: #101215; border: 1px solid var(--border);
+  color: var(--text); font: inherit; font-size: 14.5px;
+  resize: vertical;
+}
+.field input::placeholder, .field textarea::placeholder { color: #5b626b; }
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+.form__foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.form__foot .btn[disabled] { opacity: .55; cursor: default; transform: none; }
+.form__note { font-size: 13px; color: #d9a03a; }
+.done { padding: 26px 24px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+.done h2 { margin: 0 0 10px; font-size: 19px; color: var(--text-strong); }
+.done p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+.done__links { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0 0 !important; }
+.btn--ghost { background: transparent; border: 1px solid var(--border); color: var(--text) !important; }
+.btn--ghost:hover { border-color: var(--accent); color: var(--accent) !important; }
+

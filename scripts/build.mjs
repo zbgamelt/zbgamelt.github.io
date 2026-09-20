@@ -179,6 +179,7 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
       </span>
     </a>
     <nav class="top__nav">
+      <a class="top__post" href="${base}post/">发新帖</a>
       <a href="${DISCUSS_URL}" target="_blank" rel="noopener">GitHub 讨论区</a>
     </nav>
   </div>
@@ -215,11 +216,31 @@ function authorName(a, linked = true) {
   return `<a class="author" href="${esc(a.url || `https://github.com/${a.login}`)}" target="_blank" rel="noopener">${esc(a.login)}</a>`;
 }
 
+/**
+ * 网页发帖的署名识别。
+ * 用网页发的帖都是同一个 token 建的，GitHub 那边作者一律是仓库主；
+ * 后端会往正文末尾追一行「> 由 **昵称** 通过论坛页面发布 · 时间」，
+ * 这里把昵称捞出来当发帖人显示，否则全站帖子都会挂着仓库主的名字。
+ */
+const WEB_POST_RE = /由\s*(.{1,24}?)\s*通过论坛页面发布/;
+
+function webAuthor(d) {
+  const m = WEB_POST_RE.exec(text(d.bodyHTML || ''));
+  return m ? m[1].trim() : '';
+}
+
+/** 有网页署名就显昵称 + 来源标记，否则退回 GitHub 账号。 */
+function authorLabel(d, linked = true) {
+  const nick = webAuthor(d);
+  if (!nick) return authorName(d.author, linked);
+  return `<span class="author">${esc(nick)}</span><span class="srcmark" title="通过论坛页面发布">网页</span>`;
+}
+
 function threadRow(d, base) {
   const cat = d.category?.name ?? '';
   const excerpt = truncate(text(d.bodyHTML), 96);
   const replies = d.comments?.totalCount ?? 0;
-  return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}" data-search="${esc(`${d.title} ${cat} ${d.author?.login ?? ''} ${excerpt}`)}">
+  return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}" data-search="${esc(`${d.title} ${cat} ${webAuthor(d)} ${d.author?.login ?? ''} ${excerpt}`)}">
       <div class="thread__body">
         <div class="thread__top">
           <span class="chip">${catEmoji(d.category?.emoji) ? esc(catEmoji(d.category.emoji)) + ' ' : ''}${esc(cat || '讨论')}</span>
@@ -229,7 +250,7 @@ function threadRow(d, base) {
         ${excerpt ? `<p class="thread__excerpt">${esc(excerpt)}</p>` : ''}
         <div class="thread__meta">
           ${avatar(d.author, 22)}
-          ${authorName(d.author, false)}
+          ${authorLabel(d, false)}
           <span class="dot">·</span>
           <time datetime="${esc(d.updatedAt)}" title="${esc(fmtDate(d.updatedAt))}">${esc(fmtDate(d.updatedAt))}</time>
         </div>
@@ -252,8 +273,8 @@ function emptyState() {
     </svg>
     <h1>这里还一张帖子都没有…</h1>
     <p>论坛的帖子都住在 GitHub Discussions 里，第一贴要不你来开个头？</p>
-    <a class="btn" href="${NEW_POST_URL}" target="_blank" rel="noopener">去发第一帖</a>
-    <p class="empty__hint">需要 GitHub 账号 · 发完几分钟内会自动同步到这里</p>
+    <a class="btn" href="post/">去发第一帖</a>
+    <p class="empty__hint">不需要 GitHub 账号 · 发完几分钟内会自动同步到这里</p>
   </section>
 `;
 }
@@ -269,6 +290,7 @@ function renderIndex(discussions) {
       : `  <section class="hero">
     <h1>${esc(SITE.desc || '最近的讨论')}</h1>
     <p class="hero__sub">共 ${list.length} 个话题 · 全部内容来自 GitHub Discussions，静态同步。</p>
+    <p class="hero__cta"><a class="btn" href="post/">发新帖</a><span class="hero__note">不用注册，填完就能发</span></p>
     <div class="tools">
       <label class="search">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>
@@ -435,7 +457,7 @@ function renderThread(d) {
     <header class="post__head">
       ${avatar(d.author, 40)}
       <div class="post__who">
-        ${authorName(d.author)}
+        ${authorLabel(d)}
         <time datetime="${esc(d.createdAt)}">${esc(fmtDate(d.createdAt))}</time>
       </div>
       <a class="post__src" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 查看</a>
@@ -459,6 +481,113 @@ ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人�
     body,
     base: '../../',
     pageClass: 'page-thread',
+  });
+}
+
+/**
+ * 发新帖页。写权限在 Cloudflare Worker 那边（forum-api.zbgame.bid），
+ * 本站依然是纯静态，页面里没有任何凭据。
+ * 人机验证用 Turnstile（无感，可疑流量才会显示复选框）。
+ */
+function renderCompose() {
+  const p = SITE.post;
+  const ready = Boolean(p?.api && p?.turnstileSitekey);
+  // 这个页面在 /post/ 下，相对深度和 /t/<编号>/ 不同：
+  // 少写一个 base 就会去 /post/assets/style.css 找样式（不存在）→ 页面裸奔。
+  const base = '../';
+  if (!ready) {
+    return shell({
+      title: `发新帖 — ${SITE.name}`,
+      description: '去 GitHub 发新帖',
+      base,
+      body: `  <section class="empty">
+    <h1>页内发帖还没接线</h1>
+    <p>本站暂时只能跳到 GitHub 发帖。</p>
+    <a class="btn" href="${DISCUSS_URL}" target="_blank" rel="noopener">去 GitHub 发帖</a>
+  </section>`,
+    });
+  }
+  const body = `  <nav class="crumb"><a href="../">← 全部话题</a></nav>
+  <section class="compose">
+    <h1>发新帖</h1>
+    <p class="compose__sub">不用注册 GitHub 账号。发完几分钟内就会出现在首页。</p>
+    <form id="postform" class="form" novalidate>
+      <label class="field">
+        <span class="field__label">昵称 <i>选填</i></span>
+        <input id="nick" name="nickname" type="text" maxlength="24" placeholder="不填就署名「匿名访客」" autocomplete="nickname">
+      </label>
+      <label class="field">
+        <span class="field__label">标题</span>
+        <input id="title" name="title" type="text" maxlength="120" placeholder="一句话说清楚你要问什么">
+      </label>
+      <label class="field">
+        <span class="field__label">正文</span>
+        <textarea id="body" name="body" rows="10" placeholder="支持 Markdown。写得越具体，越容易被答上。"></textarea>
+      </label>
+      <div class="cf-turnstile" data-sitekey="${esc(p.turnstileSitekey)}" data-theme="dark" data-language="zh-cn"></div>
+      <div class="form__foot">
+        <button class="btn" id="submit" type="submit">发布</button>
+        <span class="form__note" id="note" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+    <div class="done" id="done" hidden>
+      <h2>发出去了 ✅</h2>
+      <p id="done__text"></p>
+      <p class="done__links">
+        <a class="btn" id="done__gh" target="_blank" rel="noopener">在 GitHub 上查看</a>
+        <a class="btn btn--ghost" href="../">回论坛首页</a>
+      </p>
+      <p class="empty__hint">首页要等站点完成重建才会出现这条（通常几分钟）。</p>
+    </div>
+  </section>`;
+  const script = `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+(function () {
+  var form = document.getElementById('postform');
+  if (!form) return;
+  var note = document.getElementById('note');
+  var btn = document.getElementById('submit');
+  function setNote(t) { if (note) note.textContent = t; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var title = document.getElementById('title').value.trim();
+    var body = document.getElementById('body').value.trim();
+    var nick = document.getElementById('nick').value.trim();
+    var ts = form.querySelector('[name="cf-turnstile-response"]');
+    if (title.length < 4) return setNote('标题至少 4 个字');
+    if (body.length < 8) return setNote('正文再写长一点点');
+    if (!ts || !ts.value) return setNote('人机验证还没完成，稍等一下再点发布');
+    btn.disabled = true;
+    setNote('正在发布…');
+    fetch(${JSON.stringify(p.api)}, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname: nick, title: title, body: body, turnstileToken: ts.value })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.d || !res.d.ok) throw new Error((res.d && res.d.error) || '发布失败');
+        document.getElementById('done__text').textContent = '《' + title + '》已经建好了。';
+        document.getElementById('done__gh').href = res.d.url;
+        form.hidden = true;
+        document.getElementById('done').hidden = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .catch(function (err) {
+        setNote(err.message || '发布失败，稍后再试');
+        if (window.turnstile) window.turnstile.reset();
+      })
+      .then(function () { btn.disabled = false; });
+  });
+})();
+</script>`;
+  return shell({
+    title: `发新帖 — ${SITE.name}`,
+    description: '在本站发一条新帖，不用注册 GitHub 账号',
+    body,
+    base,
+    pageClass: 'page-compose',
+    script,
   });
 }
 
@@ -527,6 +656,7 @@ async function main() {
 
   // 清掉上次生成物（保留源目录）
   rmSync(join(ROOT, 't'), { recursive: true, force: true });
+  rmSync(join(ROOT, 'post'), { recursive: true, force: true });
   rmSync(join(ROOT, 'index.html'), { force: true });
   rmSync(join(ROOT, '404.html'), { force: true });
 
@@ -535,6 +665,7 @@ async function main() {
     writePage(join('t', String(d.number), 'index.html'), renderThread(d), `讨论 #${d.number}`);
   }
   writePage('404.html', render404(), '404.html');
+  writePage(join('post', 'index.html'), renderCompose(), 'post/index.html');
   writeFileSync(join(ROOT, '.nojekyll'), '');
   mkdirSync(join(ROOT, 'assets'), { recursive: true });
 

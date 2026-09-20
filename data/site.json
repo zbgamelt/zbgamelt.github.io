@@ -12,5 +12,11 @@
     "reactionsEnabled": "1",
     "theme": "dark",
     "lang": "zh-CN"
+  },
+  "post": {
+    "api": "https://forum-api.zbgame.bid/new-post",
+    "turnstileSitekey": "0x4AAAAAAE9lJ4BNvsdgW4VJ",
+    "cooldownSeconds": 120,
+    "dailyCap": 30
   }
 }

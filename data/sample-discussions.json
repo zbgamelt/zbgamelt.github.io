@@ -5,13 +5,16 @@
     "url": "https://github.com/zbgamelt/zbgamelt.github.io/discussions/42",
     "createdAt": "2026-09-18T02:10:00Z",
     "updatedAt": "2026-09-20T01:40:00Z",
-    "bodyHTML": "<p>V6.6 测试版已经放出来了，这一个月里大家报的问题我们都会在这个帖子里跟进。</p>\n<p><strong>报问题时请带上这三样，定位会快很多：</strong></p>\n<ul>\n<li>手机型号 + 系统版本</li>\n<li>能重现的操作步骤</li>\n<li>截图或录屏（有的话最好）</li>\n</ul>\n<p>已知问题会更新在下面的清单里，修好了会标记已解决。</p>",
+    "bodyHTML": "<p>V6.6 测试版已经放出来了，这一个月里大家报的问题我们都会在这个帖子里跟进。</p>\n<p><strong>报问题时请带上这三样，定位会快很多：</strong></p>\n<ul>\n<li>手机型号 + 系统版本</li>\n<li>能重现的操作步骤</li>\n<li>截图或录屏（有的话最好）</li>\n</ul>\n<p>已知问题会更新在下面的清单里，修好了会标记已解决。</p>\n<hr>\n<blockquote><p>由 <strong>阿黄</strong> 通过论坛页面发布 · 2026-09-20 07:04 UTC</p></blockquote>",
     "author": {
       "login": "zbgamelt",
       "url": "https://github.com/zbgamelt",
       "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
     },
-    "category": { "name": "公告", "emoji": "📣" },
+    "category": {
+      "name": "公告",
+      "emoji": "📣"
+    },
     "comments": {
       "totalCount": 2,
       "nodes": [
@@ -19,13 +22,21 @@
           "createdAt": "2026-09-18T05:22:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>红米 K70 / 安卓 15，成就页左右滑动偶尔会卡一下，其他都挺顺。</p>",
-          "author": { "login": "mawqer123", "url": "https://github.com/mawqer123", "avatarUrl": "https://avatars.githubusercontent.com/u/1?v=4" }
+          "author": {
+            "login": "mawqer123",
+            "url": "https://github.com/mawqer123",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1?v=4"
+          }
         },
         {
           "createdAt": "2026-09-20T01:40:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>收到，第 2 条和成就页滑动是同一个渲染问题，下个包一起修。</p>",
-          "author": { "login": "zbgamelt", "url": "https://github.com/zbgamelt", "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4" }
+          "author": {
+            "login": "zbgamelt",
+            "url": "https://github.com/zbgamelt",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
+          }
         }
       ]
     }
@@ -42,7 +53,10 @@
       "url": "https://github.com/newbie-live",
       "avatarUrl": "https://avatars.githubusercontent.com/u/2?v=4"
     },
-    "category": { "name": "问答", "emoji": "🙋" },
+    "category": {
+      "name": "问答",
+      "emoji": "🙋"
+    },
     "comments": {
       "totalCount": 1,
       "nodes": [
@@ -50,7 +64,11 @@
           "createdAt": "2026-09-19T12:31:00Z",
           "isAnswer": true,
           "bodyHTML": "<p>不是随机。按在线人数的约 <code>1/10</code> 每秒增长，120 人在线差不多每秒 12 个。</p>\n<p>而且这个数会写进直播状态，中途重启直播也能接着涨，不会归零。</p>",
-          "author": { "login": "zbgamelt", "url": "https://github.com/zbgamelt", "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4" }
+          "author": {
+            "login": "zbgamelt",
+            "url": "https://github.com/zbgamelt",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
+          }
         }
       ]
     }
@@ -67,7 +85,10 @@
       "url": "https://github.com/collector-w",
       "avatarUrl": "https://avatars.githubusercontent.com/u/3?v=4"
     },
-    "category": { "name": "建议", "emoji": "💡" },
+    "category": {
+      "name": "建议",
+      "emoji": "💡"
+    },
     "comments": {
       "totalCount": 1,
       "nodes": [
@@ -75,7 +96,11 @@
           "createdAt": "2026-09-18T03:12:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>+1，顺便希望滑动切换家族的时候能用一个滑动条指示位置。</p>",
-          "author": { "login": "newbie-live", "url": "https://github.com/newbie-live", "avatarUrl": "https://avatars.githubusercontent.com/u/2?v=4" }
+          "author": {
+            "login": "newbie-live",
+            "url": "https://github.com/newbie-live",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/2?v=4"
+          }
         }
       ]
     }
@@ -92,7 +117,10 @@
       "url": "https://github.com/night-walker",
       "avatarUrl": "https://avatars.githubusercontent.com/u/4?v=4"
     },
-    "category": { "name": "反馈", "emoji": "🐞" },
+    "category": {
+      "name": "反馈",
+      "emoji": "🐞"
+    },
     "comments": {
       "totalCount": 2,
       "nodes": [
@@ -100,13 +128,21 @@
           "createdAt": "2026-09-16T15:02:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>我用流量也遇到过，感觉是断线之后没自动续上，得退到列表页再进去一次。</p>",
-          "author": { "login": "collector-w", "url": "https://github.com/collector-w", "avatarUrl": "https://avatars.githubusercontent.com/u/3?v=4" }
+          "author": {
+            "login": "collector-w",
+            "url": "https://github.com/collector-w",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/3?v=4"
+          }
         },
         {
           "createdAt": "2026-09-17T02:05:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>定位到了：网络切换后连接断掉没有触发重连，只有手动进会话才会重建。已经改成掉线自动重连 + 心跳保活，下个版本可以验一下。</p>",
-          "author": { "login": "zbgamelt", "url": "https://github.com/zbgamelt", "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4" }
+          "author": {
+            "login": "zbgamelt",
+            "url": "https://github.com/zbgamelt",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
+          }
         }
       ]
     }
@@ -123,7 +159,10 @@
       "url": "https://github.com/newbie-live",
       "avatarUrl": "https://avatars.githubusercontent.com/u/2?v=4"
     },
-    "category": { "name": "闲聊", "emoji": "💬" },
+    "category": {
+      "name": "闲聊",
+      "emoji": "💬"
+    },
     "comments": {
       "totalCount": 3,
       "nodes": [
@@ -131,19 +170,31 @@
           "createdAt": "2026-09-15T10:11:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>欢迎！先把新人任务做完，成就解锁会快很多。</p>",
-          "author": { "login": "collector-w", "url": "https://github.com/collector-w", "avatarUrl": "https://avatars.githubusercontent.com/u/3?v=4" }
+          "author": {
+            "login": "collector-w",
+            "url": "https://github.com/collector-w",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/3?v=4"
+          }
         },
         {
           "createdAt": "2026-09-15T11:50:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>公会频道在游戏里点右上角就能看到，加的时候报个活跃时段一般都会收。</p>",
-          "author": { "login": "mawqer123", "url": "https://github.com/mawqer123", "avatarUrl": "https://avatars.githubusercontent.com/u/1?v=4" }
+          "author": {
+            "login": "mawqer123",
+            "url": "https://github.com/mawqer123",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1?v=4"
+          }
         },
         {
           "createdAt": "2026-09-15T13:44:00Z",
           "isAnswer": false,
           "bodyHTML": "<p>要是想直播数据好看点，记得早点开播、时长拉满，点赞数是按在线人数慢慢滚的。</p>",
-          "author": { "login": "night-walker", "url": "https://github.com/night-walker", "avatarUrl": "https://avatars.githubusercontent.com/u/4?v=4" }
+          "author": {
+            "login": "night-walker",
+            "url": "https://github.com/night-walker",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/4?v=4"
+          }
         }
       ]
     }
