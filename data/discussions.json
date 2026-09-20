@@ -5,7 +5,7 @@
       "title": "Welcome to zbgamelt.github.io Discussions!",
       "url": "https://github.com/zbgamelt/zbgamelt.github.io/discussions/1",
       "createdAt": "2026-09-20T04:04:21Z",
-      "updatedAt": "2026-09-20T04:04:21Z",
+      "updatedAt": "2026-09-20T06:58:01Z",
       "bodyHTML": "\n<h2 dir=\"auto\">👋 Welcome!</h2>\n<p dir=\"auto\">We’re using Discussions as a place to connect with other members of our community. We hope that you:</p>\n<ul dir=\"auto\">\n<li>Ask questions you’re wondering about.</li>\n<li>Share ideas.</li>\n<li>Engage with other community members.</li>\n<li>Welcome others and are open-minded. Remember that this is a community we<br>\nbuild together 💪.</li>\n</ul>\n<p dir=\"auto\">To get started, comment below with an introduction of yourself and tell us about what you do with this community.</p>\n",
       "author": {
         "login": "zbgamelt",
@@ -17,8 +17,19 @@
         "emoji": ":mega:"
       },
       "comments": {
-        "totalCount": 0,
-        "nodes": []
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-09-20T06:58:01Z",
+            "bodyHTML": "<p dir=\"auto\">1</p>",
+            "isAnswer": false,
+            "author": {
+              "login": "zbgame001",
+              "url": "https://github.com/zbgame001",
+              "avatarUrl": "https://avatars.githubusercontent.com/u/255538890?v=4"
+            }
+          }
+        ]
       }
     }
   ]
