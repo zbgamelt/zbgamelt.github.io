@@ -187,12 +187,6 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
 <main id="main" class="wrap">
 ${body}
 </main>
-<footer class="foot">
-  <div class="wrap foot__inner">
-    <span>帖子托管在 GitHub Discussions · 本站是只读静态镜像</span>
-    <span><a href="${REPO_URL}" target="_blank" rel="noopener">${esc(OWNER)}/${esc(NAME)}</a></span>
-  </div>
-</footer>
 ${script}
 </body>
 </html>
@@ -288,8 +282,6 @@ function renderIndex(discussions) {
     list.length === 0
       ? emptyState()
       : `  <section class="hero">
-    <h1>${esc(SITE.desc || '最近的讨论')}</h1>
-    <p class="hero__sub">共 ${list.length} 个话题 · 全部内容来自 GitHub Discussions，静态同步。</p>
     <p class="hero__cta"><a class="btn" href="post/">发新帖</a><span class="hero__note">不用注册，填完就能发</span></p>
     <div class="tools">
       <label class="search">
