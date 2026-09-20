@@ -1,0 +1,39 @@
+baseURL = "https://zbgamelt.github.io/zbgamelttwo/"
+locale = "zh-cn"
+defaultContentLanguage = "zh-cn"
+title = "ZBGAME LT"
+enableRobotsTXT = true
+enableGitInfo = false
+
+# 主题是站内自带的 layouts/ + assets/，不依赖任何外部主题仓库，
+# 这样 CI 构建不需要 git submodule / Hugo Modules，可复现。
+
+[params]
+  description = "轻量、干净的静态站点。写点东西，慢慢更新。"
+  author = "zbgamelttwo"
+
+[markup]
+  [markup.highlight]
+    noClasses = false
+    style = "monokai"
+  [markup.goldmark.renderer]
+    unsafe = true
+
+[outputs]
+  home = ["HTML", "RSS"]
+  section = ["HTML", "RSS"]
+
+[[menus.main]]
+  name = "首页"
+  pageRef = "/"
+  weight = 10
+
+[[menus.main]]
+  name = "文章"
+  pageRef = "/posts"
+  weight = 20
+
+[[menus.main]]
+  name = "关于"
+  pageRef = "/about"
+  weight = 30

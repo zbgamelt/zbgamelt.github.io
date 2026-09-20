@@ -1,0 +1,54 @@
+name: 重建 Hugo 子站
+
+# 子站源在 hugo-src/，产物提交到仓库根目录的 zbgamelttwo/（Pages 从 main 根目录发布）。
+# 与论坛的 build.yml 互不干扰：build.mjs 只清理 t/ post/ search/ index.html 404.html。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hugo-src/**'
+      - '.github/workflows/hugo-subsite.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-hugo-subsite
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HUGO_VERSION: 0.166.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Hugo extended
+        run: |
+          wget -O "${{ runner.temp }}/hugo.deb" \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+          sudo dpkg -i "${{ runner.temp }}/hugo.deb"
+
+      - name: 构建子站
+        run: |
+          cd hugo-src
+          hugo --gc --minify --destination ../zbgamelttwo
+
+      - name: 提交生成结果
+        run: |
+          git config user.name  "zbgamelt"
+          git config user.email "297119334+zbgamelt@users.noreply.github.com"
+          git add -A zbgamelttwo
+          if git diff --cached --quiet; then
+            echo "没有变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(subsite): 重建 zbgamelttwo"
+          # 论坛 workflow 可能同时在推 main，冲突就 rebase 重试
+          for i in 1 2 3; do
+            git push && break
+            echo "push 被拒，第 $i 次 rebase 重试"
+            git pull --rebase --autostash origin main
+          done

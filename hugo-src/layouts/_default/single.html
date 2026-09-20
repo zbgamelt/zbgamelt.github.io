@@ -1,0 +1,15 @@
+{{ define "main" }}
+<article class="post">
+  <header class="post-head">
+    <h1>{{ .Title }}</h1>
+    <p class="meta">
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time>
+      {{ with .Params.tags }}<span class="sep">·</span>{{ range . }}<span class="tag">{{ . }}</span>{{ end }}{{ end }}
+      <span class="sep">·</span><span>{{ .ReadingTime }} 分钟</span>
+    </p>
+  </header>
+  <div class="prose">{{ .Content }}</div>
+</article>
+
+<p class="back"><a href="{{ (site.GetPage "posts").RelPermalink }}">← 全部文章</a></p>
+{{ end }}

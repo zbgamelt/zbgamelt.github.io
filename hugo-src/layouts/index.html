@@ -1,0 +1,24 @@
+{{ define "main" }}
+<section class="hero">
+  <h1>{{ site.Title }}</h1>
+  <p class="lede">{{ site.Params.description }}</p>
+  <p class="cta"><a class="btn" href="{{ (site.GetPage "posts").RelPermalink }}">看看文章</a></p>
+</section>
+
+{{ $posts := where site.RegularPages "Section" "posts" }}
+{{ with $posts }}
+<section class="recent">
+  <h2 class="sec-title">最近更新</h2>
+  <ul class="post-list">
+    {{ range first 5 . }}
+    <li>
+      <a class="row" href="{{ .RelPermalink }}">
+        <span class="row-title">{{ .Title }}</span>
+        <span class="row-date">{{ .Date.Format "2006-01-02" }}</span>
+      </a>
+    </li>
+    {{ end }}
+  </ul>
+</section>
+{{ end }}
+{{ end }}

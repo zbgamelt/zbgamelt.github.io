@@ -1,0 +1,4 @@
+# 本地构建产物（正式产物输出到 ../zbgamelttwo）
+/public/
+/resources/_gen/
+.hugo_build.lock
