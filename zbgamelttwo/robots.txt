@@ -1,1 +1,3 @@
 User-agent: *
+Disallow:
+Sitemap: https://zbgamelt.github.io/zbgamelttwo/sitemap.xml
