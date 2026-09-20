@@ -29,23 +29,40 @@
   </div>
 </header>
 <main id="main" class="wrap">
-  <section class="empty">
-    <svg class="empty__art" viewBox="0 0 220 150" role="img" aria-label="还没有帖子">
-      <ellipse cx="110" cy="132" rx="62" ry="7" fill="#ffffff" opacity=".04"/>
-      <rect x="34" y="30" width="112" height="66" rx="18" fill="#16191d" stroke="#2b2f36"/>
-      <path d="M56 96v18l20-18z" fill="#16191d" stroke="#2b2f36" stroke-linejoin="round"/>
-      <circle cx="70" cy="63" r="4.5" fill="#ffd83d"/>
-      <circle cx="90" cy="63" r="4.5" fill="#ffd83d" opacity=".55"/>
-      <circle cx="110" cy="63" r="4.5" fill="#ffd83d" opacity=".28"/>
-      <rect x="138" y="52" width="60" height="42" rx="14" fill="#101215" stroke="#24272c" stroke-dasharray="5 5"/>
-      <path d="M186 94v12l-14-12z" fill="#101215" stroke="#24272c" stroke-dasharray="5 5"/>
-    </svg>
-    <h1>这里还一张帖子都没有…</h1>
-    <p>论坛的帖子都住在 GitHub Discussions 里，第一贴要不你来开个头？</p>
-    <a class="btn" href="https://github.com/zbgamelt/zbgamelt.github.io/discussions/new" target="_blank" rel="noopener">去发第一帖</a>
-    <p class="empty__hint">需要 GitHub 账号 · 发完几分钟内会自动同步到这里</p>
+  <section class="hero">
+    <h1>zbgamelt 的讨论区：版本反馈、问题求助、功能建议，都在这儿。</h1>
+    <p class="hero__sub">共 1 个话题 · 全部内容来自 GitHub Discussions，静态同步。</p>
+    <div class="tools">
+      <label class="search">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>
+        <input id="q" type="search" placeholder="搜索标题 / 作者 / 内容…" autocomplete="off" aria-label="搜索话题">
+      </label>
+      <div class="chips" role="group" aria-label="按板块筛选">
+        <button class="chip chip--btn is-active" data-cat="*">全部</button>
+        <button class="chip chip--btn" data-cat="Announcements">Announcements</button>
+      </div>
+    </div>
   </section>
-
+  <section class="list" id="list">
+    <a class="thread" href="t/1/" data-cat="Announcements" data-search="Welcome to zbgamelt.github.io Discussions! Announcements zbgamelt 👋 Welcome! We’re using Discussions as a place to connect with other members of our community.…">
+      <div class="thread__body">
+        <div class="thread__top">
+          <span class="chip">:mega: Announcements</span>
+          <span class="thread__num">#1</span>
+        </div>
+        <h2 class="thread__title">Welcome to zbgamelt.github.io Discussions!</h2>
+        <p class="thread__excerpt">👋 Welcome! We’re using Discussions as a place to connect with other members of our community.…</p>
+        <div class="thread__meta">
+          <img class="avatar" style="--s:22px" src="https://avatars.githubusercontent.com/u/297119334?v=4&s=44" width="22" height="22" alt="" loading="lazy">
+          <span class="author">zbgamelt</span>
+          <span class="dot">·</span>
+          <time datetime="2026-09-20T04:04:21Z" title="2026/09/20 12:04">2026/09/20 12:04</time>
+        </div>
+      </div>
+      <div class="thread__count" aria-label="0 条回复"><strong>0</strong><span>回复</span></div>
+    </a>
+  </section>
+  <p class="noresult" id="noresult" hidden>没有匹配的话题，换个词试试？</p>
 </main>
 <footer class="foot">
   <div class="wrap foot__inner">
