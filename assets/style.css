@@ -16,7 +16,12 @@
 
 * { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+/* 手机端禁止缩放：
+   - touch-action: pan-x pan-y 拦掉双击放大和双指缩放（Chrome / 安卓有效）
+   - iOS Safari 从 10 开始强制保留双指缩放（无障碍策略，任何写法都关不掉），
+     所以 iOS 上靠下面的 16px 字号防住「点输入框自动放大」这个最常见的情形 */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: pan-x pan-y; }
+body { touch-action: pan-x pan-y; }
 
 body {
   margin: 0;
@@ -230,7 +235,9 @@ main { padding: 46px 0 72px; }
 
 /* ── 发新帖入口 ───────────────────────── */
 /* ── 搜索页 ─────────────────────────── */
-.page-search main { padding: 0 0 40px; }
+/* 只清掉上下的间距（吸顶栏要贴到顶部），左右留白必须留住 ——
+   用 padding 简写会把 .wrap 的左右 22px 一起清零，内容就贴屏边被裁了。 */
+.page-search main { padding-top: 0; padding-bottom: 40px; }
 .sbar {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 0; border-bottom: 1px solid var(--border);
@@ -302,3 +309,8 @@ main { padding: 46px 0 72px; }
 .btn--ghost { background: transparent; border: 1px solid var(--border); color: var(--text) !important; }
 .btn--ghost:hover { border-color: var(--accent); color: var(--accent) !important; }
 
+/* 手机端禁止缩放：输入框字号小于 16px 时 iOS 聚焦会自动放大，这里一律提到 16px。
+   必须放在文件最后 —— 媒体查询写在中部时，会被后面同优先级的基础规则反杀（踩过）。 */
+@media (max-width: 560px) {
+  .sbar__input, .field input, .field textarea { font-size: 16px; }
+}
