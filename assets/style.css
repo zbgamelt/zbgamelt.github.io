@@ -185,14 +185,6 @@ main { padding: 46px 0 72px; }
 }
 .post__title::-webkit-scrollbar { display: none; }
 
-/* 帖子页：分隔线铺满整屏，内容仍保持内缩（.wrap 左右各 22px） */
-.page-thread .tbar,
-.page-thread .post,
-.page-thread .post__title {
-  margin-left: -22px; margin-right: -22px;
-  padding-left: 22px; padding-right: 22px;
-}
-
 /* 正文：无外框、紧贴 */
 .post { padding: 0 0 20px; border-bottom: 1px solid var(--border); }
 .post__meta { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; color: var(--muted); font-size: 12.5px; }
@@ -344,4 +336,23 @@ main { padding: 46px 0 72px; }
    必须放在文件最后 —— 媒体查询写在中部时，会被后面同优先级的基础规则反杀（踩过）。 */
 @media (max-width: 560px) {
   .sbar__input, .field input, .field textarea { font-size: 16px; }
+}
+
+/* ── 分隔线一律铺满整屏 ───────────────────────────────
+   这些横线的载体向左右各外扩 .wrap 的 22px 内边距，线的两头就顶到屏边；
+   文字内容仍然保持 22px 内缩，整页不会被撑出横向滚动条。
+   必须放在样式表末尾：要盖掉各组件自己 padding: 简写里的左右值。
+   （.post__head/.reply__head 那两条在圆角卡片内部，属于卡片的一部分，不动。） */
+.tabs,          /* 首页分类 tab 条 */
+.thread,        /* 首页话题行 */
+.sbar,          /* 搜索页吸顶搜索条 */
+.sitem,         /* 搜索页结果行 */
+.md hr,         /* 正文里的分隔线 */
+.page-thread .tbar,
+.page-thread .post,
+.page-thread .post__title {
+  margin-left: -22px;
+  margin-right: -22px;
+  padding-left: 22px;
+  padding-right: 22px;
 }
