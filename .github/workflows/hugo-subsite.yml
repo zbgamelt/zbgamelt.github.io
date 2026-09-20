@@ -1,7 +1,19 @@
 name: 重建 Hugo 子站
 
 # 子站源在 hugo-src/，产物提交到仓库根目录的 zbgamelttwo/（Pages 从 main 根目录发布）。
-# 与论坛的 build.yml 互不干扰：build.mjs 只清理 t/ post/ search/ index.html 404.html。
+# 与论坛的 build.yml 互不干扰：build.mjs 只清理 t/ post/ search/ me/ index.html 404.html。
+#
+# ⚠️ 2026-09-20 踩过的坑（主站线上 404 近一小时），改这里之前先读完：
+#   同一次 push 会同时唤起本文件与 build.yml，两边都往 main 推提交。那次 build.yml 的
+#   裸 git push 被本 workflow 抢推拒掉而失败，之后本 workflow 用 GITHUB_TOKEN 推出的
+#   chore(subsite) 提交又不会再触发任何 workflow → 主站产物一直停在旧提交，只能等 cron。
+#   两条必须记住的 GitHub 规则：
+#     1. 用仓库自带 GITHUB_TOKEN 推出去的提交，不会触发任何 workflow（递归防护）；
+#        例外只有 workflow_dispatch / repository_dispatch —— 这两种事件即使由
+#        GITHUB_TOKEN 发起也一定会创建 run。所以本文件收尾直接 dispatch build.yml 就行，
+#        不需要额外的 PAT（见最后一步）。
+#     2. 本文件推送要重试、且三次都失败必须报错退出：以前循环最后跑的是 git pull，
+#        推送失败会被误报成 success，事故当天就是这么静默过去的。
 on:
   push:
     branches: [main]
@@ -12,6 +24,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # 收尾 dispatch build.yml 需要（workflow_dispatch 属于递归防护的例外）
 
 concurrency:
   group: build-hugo-subsite
@@ -46,9 +59,42 @@ jobs:
             exit 0
           fi
           git commit -m "chore(subsite): 重建 zbgamelttwo"
-          # 论坛 workflow 可能同时在推 main，冲突就 rebase 重试
+          # 论坛 workflow 可能同时在推 main，冲突就 rebase 重试。
+          # 三次都失败必须 exit 1：否则最后一条 git pull 成功会把失败掩盖成 success。
           for i in 1 2 3; do
-            git push && break
+            if git push; then
+              echo "✓ 已推送"
+              exit 0
+            fi
             echo "push 被拒，第 $i 次 rebase 重试"
             git pull --rebase --autostash origin main
           done
+          echo "::error::push 重试 3 次仍被拒"
+          exit 1
+
+      # 收尾保险：本 workflow 用 GITHUB_TOKEN 推的 chore(subsite) 不会再触发 build.yml，
+      # 而主站可能正等着重建（2026-09-20 那次事故就是这么来的）。
+      # 显式 dispatch 一次：workflow_dispatch 是递归防护的例外，用 GITHUB_TOKEN 调也真的会创建 run。
+      # 放在推送之后，论坛重建就能落在本文件提交之上；没内容变化时 build.yml 会自己跳过提交。
+      - name: 触发论坛重建（build.yml）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          code=000
+          for i in 1 2 3; do
+            code=$(curl -sS -o "$RUNNER_TEMP/dispatch.json" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/dispatches" \
+              -d '{"ref":"main"}') || code=000
+            if [ "$code" = "204" ]; then
+              echo "✓ 已触发「重建静态论坛」（workflow_dispatch）"
+              exit 0
+            fi
+            echo "dispatch 失败（HTTP $code），第 $i 次重试"
+            cat "$RUNNER_TEMP/dispatch.json" 2>/dev/null || true
+            sleep 5
+          done
+          echo "::error::无法触发 build.yml（HTTP $code），主站可能停留在旧产物"
+          exit 1
