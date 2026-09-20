@@ -152,7 +152,30 @@ const FAVICON =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0b0c0e"/><path d="M8 10.5h16v9a2 2 0 0 1-2 2h-8l-4.5 3.5V21.5H10a2 2 0 0 1-2-2z" fill="#ffd83d"/></svg>`,
   );
 
-function shell({ title, description, body, base = '', pageClass = '', script = '' }) {
+const ICON_SEARCH =
+  '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>';
+const ICON_BACK =
+  '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7.78 2.22 2 8l5.78 5.78 1.06-1.06L4.62 8.5H14v-1.5H4.62l4.22-4.22z"/></svg>';
+const ICON_PLUS =
+  '<svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8.75 2.5v4.75H13.5v1.5H8.75v4.75h-1.5V8.75H2.5v-1.5h4.75V2.5z"/></svg>';
+
+/**
+ * 页面外壳。bare=true 用于搜索页：整页铺满，不要站点头部。
+ * fab=false 用于发帖页：已经在发帖页了，不必再挂一个发帖悬浮球。
+ */
+function shell({ title, description, body, base = '', pageClass = '', script = '', bare = false, fab = true }) {
+  const header = bare
+    ? ''
+    : `<header class="top">
+  <div class="wrap top__inner">
+    <a class="brand" href="${base || './'}">${esc(SITE.name)}</a>
+    <a class="iconbtn" href="${base}search/" aria-label="搜索帖子" title="搜索">${ICON_SEARCH}</a>
+  </div>
+</header>
+`;
+  const fabBtn = fab
+    ? `<a class="fab" href="${base}post/" aria-label="发新帖" title="发新帖">${ICON_PLUS}</a>\n`
+    : '';
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -169,15 +192,10 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
 </head>
 <body class="${pageClass}">
 <a class="skip" href="#main">跳到内容</a>
-<header class="top">
-  <div class="wrap top__inner">
-    <a class="brand" href="${base || './'}">${esc(SITE.name)}</a>
-  </div>
-</header>
-<main id="main" class="wrap">
+${header}<main id="main" class="wrap">
 ${body}
 </main>
-${script}
+${fabBtn}${script}
 </body>
 </html>
 `;
@@ -213,6 +231,19 @@ function webAuthor(d) {
   return m ? m[1].trim() : '';
 }
 
+/** 正文纯文本，用于摘要和搜索匹配；网页发帖的落款行排掉，不让它混进去。 */
+function bodyText(d) {
+  return text(d.bodyHTML || '')
+    .replace(/\s*由\s*.{1,24}?\s*通过论坛页面发布[^\n]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** 发帖人（纯文本）：有网页署名用署名，否则用 GitHub 账号。 */
+function authorText(d) {
+  return webAuthor(d) || d.author?.login || '匿名';
+}
+
 /** 有网页署名就显昵称 + 来源标记，否则退回 GitHub 账号。 */
 function authorLabel(d, linked = true) {
   const nick = webAuthor(d);
@@ -224,7 +255,7 @@ function threadRow(d, base) {
   const cat = d.category?.name ?? '';
   const excerpt = truncate(text(d.bodyHTML), 96);
   const replies = d.comments?.totalCount ?? 0;
-  return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}" data-search="${esc(`${d.title} ${cat} ${webAuthor(d)} ${d.author?.login ?? ''} ${excerpt}`)}">
+  return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}">
       <div class="thread__body">
         <div class="thread__top">
           <span class="chip">${catEmoji(d.category?.emoji) ? esc(catEmoji(d.category.emoji)) + ' ' : ''}${esc(cat || '讨论')}</span>
@@ -272,16 +303,9 @@ function renderIndex(discussions) {
     list.length === 0
       ? emptyState()
       : `  <section class="hero">
-    <p class="hero__cta"><a class="btn" href="post/">发新帖</a><span class="hero__note">不用注册，填完就能发</span></p>
-    <div class="tools">
-      <label class="search">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>
-        <input id="q" type="search" placeholder="搜索标题 / 作者 / 内容…" autocomplete="off" aria-label="搜索话题">
-      </label>
-      <div class="chips" role="group" aria-label="按板块筛选">
-        <button class="chip chip--btn is-active" data-cat="*">全部</button>
-${cats.map((c) => `        <button class="chip chip--btn" data-cat="${esc(c)}">${esc(c)}</button>`).join('\n')}
-      </div>
+    <div class="chips" role="group" aria-label="按板块筛选">
+      <button class="chip chip--btn is-active" data-cat="*">全部</button>
+${cats.map((c) => `      <button class="chip chip--btn" data-cat="${esc(c)}">${esc(c)}</button>`).join('\n')}
     </div>
   </section>
   <section class="list" id="list">
@@ -311,25 +335,19 @@ ${list.map((d) => threadRow(d, '')).join('\n')}
     if (rel) el.textContent = rel;
   });
 
-  var q = document.getElementById('q');
-  if (!q) return;
   var items = Array.prototype.slice.call(document.querySelectorAll('.thread'));
   var btns = Array.prototype.slice.call(document.querySelectorAll('.chip--btn'));
   var noresult = document.getElementById('noresult');
   var cat = '*';
   function apply() {
-    var kw = q.value.trim().toLowerCase();
     var shown = 0;
     items.forEach(function (el) {
-      var okCat = cat === '*' || el.dataset.cat === cat;
-      var okKw = !kw || (el.dataset.search || '').toLowerCase().indexOf(kw) !== -1;
-      var ok = okCat && okKw;
+      var ok = cat === '*' || el.dataset.cat === cat;
       el.hidden = !ok;
       if (ok) shown++;
     });
     if (noresult) noresult.hidden = shown > 0;
   }
-  q.addEventListener('input', apply);
   btns.forEach(function (b) {
     b.addEventListener('click', function () {
       cat = b.dataset.cat;
@@ -570,6 +588,95 @@ function renderCompose() {
     base,
     pageClass: 'page-compose',
     script,
+    fab: false,
+  });
+}
+
+/**
+ * 搜索页：整页铺满。第一行是搜索栏（返回 / 输入框 / 搜索图标），
+ * 第二行是「帖子 x」，剩下全是结果，行与行之间只有分隔线，没有外框。
+ * 帖子数据直接内嵌进页面（不额外 fetch），这样本地 file:// 也能打开验证。
+ */
+function renderSearch(discussions) {
+  const list = discussions.slice().sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  const data = list.map((d) => ({
+    n: d.number,
+    t: d.title,
+    x: truncate(bodyText(d), 110),
+    s: bodyText(d).toLowerCase().slice(0, 600),
+    u: authorText(d),
+  }));
+  const body = `  <div class="sbar">
+    <a class="sbar__back" href="../" id="sback" aria-label="返回" title="返回">${ICON_BACK}</a>
+    <input id="sq" class="sbar__input" type="search" placeholder="搜索帖子…" autocomplete="off" aria-label="搜索帖子">
+    <button id="sgo" class="sbar__go" type="button" aria-label="搜索" title="搜索">${ICON_SEARCH}</button>
+  </div>
+  <p class="scount" id="scount">帖子 0</p>
+  <div class="slist" id="slist"></div>
+  <p class="sempty" id="sempty" hidden>没有匹配的帖子，换个词试试？</p>`;
+  const script = `<script>
+(function () {
+  var POSTS = ${JSON.stringify(data)};
+  var q = document.getElementById('sq');
+  var list = document.getElementById('slist');
+  var count = document.getElementById('scount');
+  var empty = document.getElementById('sempty');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function render() {
+    var terms = q.value.trim().toLowerCase().split(/\\s+/).filter(Boolean);
+    var hit = POSTS.filter(function (p) {
+      if (!terms.length) return true;
+      var hay = (p.t + ' ' + p.x + ' ' + p.s + ' ' + p.u).toLowerCase();
+      return terms.every(function (t) { return hay.indexOf(t) !== -1; });
+    });
+    count.textContent = '帖子 ' + hit.length;
+    empty.hidden = hit.length > 0;
+    list.innerHTML = hit
+      .map(function (p) {
+        return (
+          '<a class="sitem" href="../t/' + p.n + '/">' +
+          '<h2 class="sitem__title">' + esc(p.t) + '</h2>' +
+          (p.x ? '<p class="sitem__excerpt">' + esc(p.x) + '</p>' : '') +
+          '<div class="sitem__user">' + esc(p.u) + '</div>' +
+          '</a>'
+        );
+      })
+      .join('');
+  }
+
+  q.addEventListener('input', render);
+  q.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); q.blur(); }
+  });
+  document.getElementById('sgo').addEventListener('click', function () { render(); q.focus(); });
+  // 从站内点进来的才走浏览器返回；直接打开这个地址的就回首页
+  document.getElementById('sback').addEventListener('click', function (e) {
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+        e.preventDefault();
+        history.back();
+      }
+    } catch (err) {}
+  });
+  render();
+  q.focus();
+})();
+</script>`;
+  return shell({
+    title: `搜索 — ${SITE.name}`,
+    description: '搜索论坛里的帖子',
+    body,
+    base: '../',
+    pageClass: 'page-search',
+    script,
+    bare: true,
+    fab: false,
   });
 }
 
@@ -639,6 +746,7 @@ async function main() {
   // 清掉上次生成物（保留源目录）
   rmSync(join(ROOT, 't'), { recursive: true, force: true });
   rmSync(join(ROOT, 'post'), { recursive: true, force: true });
+  rmSync(join(ROOT, 'search'), { recursive: true, force: true });
   rmSync(join(ROOT, 'index.html'), { force: true });
   rmSync(join(ROOT, '404.html'), { force: true });
 
@@ -648,6 +756,7 @@ async function main() {
   }
   writePage('404.html', render404(), '404.html');
   writePage(join('post', 'index.html'), renderCompose(), 'post/index.html');
+  writePage(join('search', 'index.html'), renderSearch(discussions), 'search/index.html');
   writeFileSync(join(ROOT, '.nojekyll'), '');
   mkdirSync(join(ROOT, 'assets'), { recursive: true });
 
