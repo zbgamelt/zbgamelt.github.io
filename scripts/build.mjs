@@ -457,7 +457,6 @@ function renderThread(d) {
       ${avatar(d.author, 24)}
       ${authorLabel(d)}
       <time datetime="${esc(d.createdAt)}">${esc(fmtDate(d.createdAt))}</time>
-      <a class="post__src" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 查看</a>
     </div>
     <div class="md post__body">${sanitize(d.bodyHTML)}</div>
   </article>

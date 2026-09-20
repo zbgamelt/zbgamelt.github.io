@@ -176,13 +176,18 @@ main { padding: 46px 0 72px; }
 .page-thread .tbar { top: 0; }
 
 /* 第二行：帖子标题（在标题栏分割线之下） */
-.post__title { margin: 0 0 14px; font-size: 21px; line-height: 1.4; font-weight: 650; color: var(--text-strong); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.post__title {
+  margin: 0 0 14px; padding-bottom: 12px; font-size: 21px; line-height: 1.4;
+  font-weight: 650; color: var(--text-strong); letter-spacing: -.01em;
+  white-space: nowrap; overflow-x: auto; overflow-y: hidden;   /* 宁可横滑，也不要折行把标题挤成两行 */
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none; -ms-overflow-style: none;             /* 滚动条本身不显示，手机直接拖 */
+}
+.post__title::-webkit-scrollbar { display: none; }
 
 /* 正文：无外框、紧贴 */
 .post { padding: 0 0 20px; border-bottom: 1px solid var(--border); }
 .post__meta { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; color: var(--muted); font-size: 12.5px; }
-.post__src { margin-left: auto; flex: none; color: var(--muted); font-size: 12.5px; }
-.post__src:hover { color: var(--accent); }
 .post .post__body { padding: 0; }
 
 /* 回复区（giscus 托管 + 静态兜底）*/
