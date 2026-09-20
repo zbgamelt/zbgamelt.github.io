@@ -303,7 +303,6 @@ main { padding: 46px 0 72px; }
 
 /* ── 发新帖页 ───────────────────────── */
 .compose { max-width: 680px; }
-.compose h1 { margin: 0 0 8px; font-size: 24px; color: var(--text-strong); font-weight: 650; }
 .compose__sub { margin: 0 0 28px; color: var(--muted); font-size: 14px; }
 .form { display: flex; flex-direction: column; gap: 20px; }
 .field { display: flex; flex-direction: column; gap: 8px; }
