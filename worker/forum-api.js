@@ -24,11 +24,15 @@
  *   GET  /auth/callback         GitHub 回调：换 token → 建会话 → 跳回站点
  *   POST /auth/logout           退出登录
  *   GET  /api/me                当前登录者 { login, avatar }
+ *   GET  /my-posts              我发过的帖子（拿登录者自己的 token 查，只返回他本人的）
+ *   POST /delete-post           删帖 { numbers:[…] }，只能删自己发的
  *   POST /new-post              发帖 { title, body }，需 Bearer 会话号
  */
 
 const REPO_ID = 'R_kgDOUiCTAQ';                     // zbgamelt/zbgamelt.github.io
 const REPO_FULL = 'zbgamelt/zbgamelt.github.io';
+const OWNER = REPO_FULL.split('/')[0];
+const NAME = REPO_FULL.split('/')[1];
 const BUILD_WORKFLOW = 'build.yml';
 const CATEGORY_ID = 'DIC_kwDOUiCTAc4DF_c1';         // General
 const DEFAULT_ORIGIN = 'https://zbgamelt.github.io';
@@ -155,6 +159,57 @@ async function createDiscussion(env, token, title, body) {
 }
 
 /**
+ * 用**登录者自己的** token 调 GraphQL（查帖子、删帖子都走这条路）。
+ * 出任何错都抛异常，由调用方翻成给用户看的话。
+ */
+async function gql(token, query, variables) {
+  const res = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'zbgamelt-forum-api',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (data.errors) throw new Error(JSON.stringify(data.errors).slice(0, 300));
+  return data.data || {};
+}
+
+/** 查「我的帖子」：只取本人的，口径跟站点首页一致（标题 + 摘要 + 时间）。 */
+const MINE_QUERY = `query($owner:String!,$name:String!){
+  repository(owner:$owner,name:$name){
+    discussions(first:100, orderBy:{field:CREATED_AT, direction:DESC}){
+      nodes{ number title createdAt updatedAt bodyHTML author{ login } category{ name } }
+    }
+  }
+}`;
+
+/** 删之前先按编号查出 node id 和作者，用来卡「只能删自己的」。 */
+const ONE_QUERY = `query($owner:String!,$name:String!,$number:Int!){
+  repository(owner:$owner,name:$name){ discussion(number:$number){ id author{ login } } }
+}`;
+
+const DELETE_MUT = `mutation($id:ID!){ deleteDiscussion(input:{id:$id}){ discussion{ number } } }`;
+
+/** 正文 HTML → 列表用的纯文本摘要（口径跟站点首页的 bodyText 一致）。 */
+function excerptOf(html, max = 96) {
+  const t = String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s*由\s*.{1,24}?\s*通过论坛页面发布[^\n]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return t.length <= max ? t : t.slice(0, max).replace(/\s+\S*$/, '') + '…';
+}
+
+/**
  * 让静态站尽快重建。发帖人的 token 里没有 workflow 权限，所以这里用机器人 token
  * （有就用，没有就跳过）；另外 GitHub 的 discussion 事件本身也会触发重建。
  * 纯尽力而为，失败绝不影响发帖。
@@ -241,6 +296,74 @@ export default {
       const s = await sessionOf(request, env);
       if (!s) return json(env, { error: '没登录' }, 401);
       return json(env, { login: s.l, avatar: s.a });
+    }
+
+    /* ---------- 我的 / 删帖 ---------- */
+
+    if (path === '/my-posts' && request.method === 'GET') {
+      const s = await sessionOf(request, env);
+      if (!s) return json(env, { error: '请先用 GitHub 登录' }, 401);
+      let nodes;
+      try {
+        const data = await gql(s.t, MINE_QUERY, { owner: OWNER, name: NAME });
+        nodes = data?.repository?.discussions?.nodes || [];
+      } catch (err) {
+        return json(env, { error: `读不到你的帖子：${err.message}` }, 502);
+      }
+      const mine = s.l.toLowerCase();
+      const posts = nodes
+        .filter((d) => (d.author?.login || '').toLowerCase() === mine)
+        .map((d) => ({
+          n: d.number,
+          t: d.title,
+          x: excerptOf(d.bodyHTML),
+          ts: Date.parse(d.createdAt) || 0,
+          us: Date.parse(d.updatedAt) || Date.parse(d.createdAt) || 0,
+          cat: d.category?.name || '',
+        }));
+      return json(env, { ok: true, login: s.l, posts });
+    }
+
+    if (path === '/delete-post' && request.method === 'POST') {
+      const s = await sessionOf(request, env);
+      if (!s) return json(env, { error: '请先用 GitHub 登录' }, 401);
+
+      let payload;
+      try {
+        payload = await request.json();
+      } catch {
+        return json(env, { error: '请求体不是合法 JSON' }, 400);
+      }
+      const raw = Array.isArray(payload.numbers) ? payload.numbers : [payload.number];
+      const numbers = [
+        ...new Set(raw.map(Number).filter((n) => Number.isInteger(n) && n > 0)),
+      ].slice(0, 50);
+      if (!numbers.length) return json(env, { error: '没给要删的帖子编号' }, 400);
+
+      const mine = s.l.toLowerCase();
+      const deleted = [];
+      const failed = [];
+      for (const n of numbers) {
+        try {
+          const one = await gql(s.t, ONE_QUERY, { owner: OWNER, name: NAME, number: n });
+          const d = one?.repository?.discussion;
+          if (!d) {
+            failed.push({ n, error: '这条帖子已经不在 GitHub 上了' });
+            continue;
+          }
+          if ((d.author?.login || '').toLowerCase() !== mine) {
+            failed.push({ n, error: '只能删自己发的帖子' });
+            continue;
+          }
+          await gql(s.t, DELETE_MUT, { id: d.id });
+          deleted.push(n);
+        } catch (err) {
+          failed.push({ n, error: String(err.message || '删除失败').slice(0, 160) });
+        }
+      }
+      // 删成功就让站点尽快重建；失败无所谓，还有定时同步兜底
+      if (deleted.length) ctx.waitUntil(pokeRebuild(env));
+      return json(env, { ok: deleted.length > 0, deleted, failed });
     }
 
     /* ---------- 发帖 ---------- */

@@ -159,12 +159,19 @@ const ICON_BACK =
   '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7.78 2.22 2 8l5.78 5.78 1.06-1.06L4.62 8.5H14v-1.5H4.62l4.22-4.22z"/></svg>';
 const ICON_PLUS =
   '<svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8.75 2.5v4.75H13.5v1.5H8.75v4.75h-1.5V8.75H2.5v-1.5h4.75V2.5z"/></svg>';
+const ICON_HOME =
+  '<svg viewBox="0 0 16 16" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M8 1.3 1.6 6.8V15h4.5v-4.4h3.8V15h4.5V6.8z"/></svg>';
+const ICON_USER =
+  '<svg viewBox="0 0 16 16" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M8 8.3a3.65 3.65 0 1 0 0-7.3 3.65 3.65 0 0 0 0 7.3m0 1.5c-3.2 0-5.8 1.7-5.8 3.8V15h11.6v-1.4c0-2.1-2.6-3.8-5.8-3.8"/></svg>';
+/** 卡片右上角的「更多」：竖着的三个点 */
+const ICON_MORE =
+  '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 3.1a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5m0 6.15a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5m0 6.15a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5"/></svg>';
 
 /**
  * 页面外壳。bare=true 用于搜索页：整页铺满，不要站点头部。
  * fab=false 用于发帖页：已经在发帖页了，不必再挂一个发帖悬浮球。
  */
-function shell({ title, description, body, base = '', pageClass = '', script = '', bare = false, fab = true }) {
+function shell({ title, description, body, base = '', pageClass = '', script = '', bare = false, fab = true, nav = true, navOn = '' }) {
   const header = bare
     ? ''
     : `<header class="top">
@@ -176,6 +183,13 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
 `;
   const fabBtn = fab
     ? `<a class="fab" href="${base}post/" aria-label="发新帖" title="发新帖">${ICON_PLUS}</a>\n`
+    : '';
+  // 底部栏：首页 / 我的。发帖页（专心写东西）与 404（深链下相对路径会错）不挂。
+  const navBar = nav
+    ? `<nav class="bnav" aria-label="主导航">
+  <a class="bnav__item${navOn === 'home' ? ' is-on' : ''}" href="${base || './'}"${navOn === 'home' ? ' aria-current="page"' : ''}>${ICON_HOME}<span>首页</span></a>
+  <a class="bnav__item${navOn === 'me' ? ' is-on' : ''}" href="${base}me/"${navOn === 'me' ? ' aria-current="page"' : ''}>${ICON_USER}<span>我的</span></a>
+</nav>\n`
     : '';
   return `<!doctype html>
 <html lang="zh-CN">
@@ -191,12 +205,12 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
 <link rel="icon" href="${FAVICON}">
 <link rel="stylesheet" href="${base}assets/style.css">
 </head>
-<body class="${pageClass}">
+<body class="${pageClass}${nav ? ' has-nav' : ''}">
 <a class="skip" href="#main">跳到内容</a>
 ${header}<main id="main" class="wrap">
 ${body}
 </main>
-${fabBtn}${script}
+${fabBtn}${navBar}${script}
 </body>
 </html>
 `;
@@ -372,6 +386,7 @@ ${list.map((d) => threadRow(d, '')).join('\n')}
     body,
     script,
     pageClass: 'page-index',
+    navOn: 'home',
   });
 }
 
@@ -487,7 +502,26 @@ ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人�
     base: '../../',
     pageClass: 'page-thread',
     fab: false,   // 帖子页不要发布悬浮球
+    navOn: 'home',
   });
+}
+
+/**
+ * 站点配置里的 post.api 是基址；万一被写成完整端点（历史上是 .../new-post），
+ * 这里也兜住。**必须在构建期算好**：页内脚本是模板字符串，`\/` 会被当成转义
+ * 退化成 `/`，带反斜杠的正则写进模板会静默产生 `//...` 注释，整个脚本语法错死掉
+ * （有产物自检兜着，但别去踩）。
+ */
+function apiBaseOf(p) {
+  try {
+    const u = new URL(p.api);
+    let path = u.pathname;
+    while (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+    if (path === '/new-post' || path === '/api') path = '';
+    return u.origin + (path === '/' ? '' : path);
+  } catch {
+    return String(p.api || '');
+  }
 }
 
 /**
@@ -552,20 +586,7 @@ function renderCompose() {
       <p class="empty__hint">首页要等站点完成重建才会出现这条（通常几分钟）。</p>
     </div>
   </section>`;
-  // 配置里给的是基址；万一被写成完整端点（历史上是 .../new-post），这里也兜住。
-  // 必须在构建期算好：下面的脚本是模板字符串，`\/` 会被当成转义退化成 `/`，
-  // 带反斜杠的正则写进模板会静默产生 `//...` 注释，整个脚本语法错死掉。
-  const apiBase = (() => {
-    try {
-      const u = new URL(p.api);
-      let path = u.pathname;
-      while (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
-      if (path === '/new-post' || path === '/api') path = '';
-      return u.origin + (path === '/' ? '' : path);
-    } catch {
-      return String(p.api || '');
-    }
-  })();
+  const apiBase = apiBaseOf(p);
   const script = `<script>
 (function () {
   var API = ${JSON.stringify(apiBase)};
@@ -655,6 +676,319 @@ function renderCompose() {
     script,
     fab: false,
     bare: true,   // 发帖页不要全站顶栏（同帖子页）
+    nav: false,   // 发帖页也不挂底部栏：专心写东西
+  });
+}
+
+/**
+ * 「我的」页：第一行大头像 + GitHub 用户名，第二行「我的发帖」入口。
+ * 站点依然是纯静态 —— 这里只有 API 地址和会话号，凭据都在 Worker 那边。
+ */
+function renderMe() {
+  const p = SITE.post;
+  const base = '../';
+  const apiBase = apiBaseOf(p);
+  const body = `  <section class="me">
+    <div class="gate" id="gate">
+      <p>用 GitHub 账号登录后，这里能看到你自己的帖子。</p>
+      <a class="btn" id="login">用 GitHub 登录</a>
+    </div>
+    <div id="mebody" hidden>
+      <div class="me__id">
+        <img class="me__avatar" id="me__av" alt="" width="64" height="64">
+        <b class="me__name" id="me__name"></b>
+      </div>
+      <a class="me__row" href="posts/">
+        <span>我的发帖</span>
+        <span class="me__chev" aria-hidden="true">›</span>
+      </a>
+      <p class="me__foot"><button class="me__out" id="out" type="button">退出登录</button></p>
+    </div>
+  </section>`;
+  const script = `<script>
+(function () {
+  var API = ${JSON.stringify(apiBase)};
+  var KEY = 'zbforum_sess';
+  var S = '';
+  try { S = localStorage.getItem(KEY) || ''; } catch (e) { S = ''; }
+  // 登录回调把会话号放在 URL 片段里带回来（片段不发给服务器、也不进 Referer）
+  if (location.hash.indexOf('#s=') === 0) {
+    S = location.hash.slice(3);
+    try { localStorage.setItem(KEY, S); } catch (e) {}
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  var gate = document.getElementById('gate');
+  var mebody = document.getElementById('mebody');
+  function forget() { try { localStorage.removeItem(KEY); } catch (e) {} S = ''; }
+  function guest() { gate.hidden = false; mebody.hidden = true; }
+  function show(d) {
+    gate.hidden = true;
+    mebody.hidden = false;
+    document.getElementById('me__name').textContent = '@' + d.login;
+    var av = document.getElementById('me__av');
+    if (d.avatar) { av.src = d.avatar; } else { av.hidden = true; }
+  }
+  document.getElementById('login').addEventListener('click', function () {
+    location.href = API + '/auth/login?return=' + encodeURIComponent(location.origin + location.pathname);
+  });
+  document.getElementById('out').addEventListener('click', function () {
+    fetch(API + '/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + S } })
+      .then(function () { forget(); location.reload(); })
+      .catch(function () { forget(); location.reload(); });
+  });
+  if (!S) { guest(); return; }
+  fetch(API + '/api/me', { headers: { Authorization: 'Bearer ' + S } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) { if (d && d.login) { show(d); } else { forget(); guest(); } })
+    .catch(guest);
+})();
+</script>`;
+  return shell({
+    title: `我的 — ${SITE.name}`,
+    description: '你的 GitHub 账号，以及你发过的帖子',
+    body,
+    base,
+    pageClass: 'page-me',
+    script,
+    bare: true,
+    navOn: 'me',
+  });
+}
+
+/**
+ * 「我的发帖」页：标题栏（← / 我的发帖 / 多选删除）+ 自己的帖子卡片。
+ * 卡片右上角有 3 点菜单（只有「删除帖子」）；点「多选删除」进勾选模式批量删。
+ * 删除走 Worker，用登录者自己的 token，并在 Worker 里核对作者 —— 只能删自己的。
+ */
+function renderMyPosts() {
+  const p = SITE.post;
+  const base = '../../';
+  const apiBase = apiBaseOf(p);
+  const body = `  <header class="tbar tbar--act">
+    <a class="tbar__back" href="../" aria-label="返回">${ICON_BACK}</a>
+    <div class="tbar__label">我的发帖</div>
+    <div class="tbar__right" id="right">
+      <button class="tbar__act" id="sel" type="button">多选删除</button>
+    </div>
+  </header>
+  <div class="gate" id="gate">
+    <p>用 GitHub 账号登录后，这里能管理你自己的帖子。</p>
+    <a class="btn" id="login">用 GitHub 登录</a>
+  </div>
+  <p class="note" id="note" role="status" aria-live="polite" hidden></p>
+  <div class="list" id="list" hidden></div>
+  <section class="empty" id="empty" hidden>
+    <p>你还没发过帖子。</p>
+    <a class="btn" href="${base}post/">去发第一帖</a>
+  </section>
+  <div class="confirm" id="cf" hidden>
+    <div class="confirm__box" role="dialog" aria-modal="true" aria-labelledby="cf__t">
+      <h2 id="cf__t">删除这篇帖子？</h2>
+      <p>删掉就没了，GitHub 上的讨论也会一起消失。</p>
+      <div class="confirm__foot">
+        <button class="btn btn--ghost" id="cf__no" type="button">再想想</button>
+        <button class="btn btn--danger" id="cf__yes" type="button">删除</button>
+      </div>
+    </div>
+  </div>`;
+  const script = `<script>
+(function () {
+  var API = ${JSON.stringify(apiBase)};
+  var KEY = 'zbforum_sess';
+  var S = '';
+  try { S = localStorage.getItem(KEY) || ''; } catch (e) { S = ''; }
+  if (location.hash.indexOf('#s=') === 0) {
+    S = location.hash.slice(3);
+    try { localStorage.setItem(KEY, S); } catch (e) {}
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  var gate = document.getElementById('gate');
+  var list = document.getElementById('list');
+  var empty = document.getElementById('empty');
+  var note = document.getElementById('note');
+  var right = document.getElementById('right');
+  var cf = document.getElementById('cf');
+  var posts = [];
+  var picking = false;
+  var picked = {};
+  var pending = [];
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function forget() { try { localStorage.removeItem(KEY); } catch (e) {} S = ''; }
+  function setNote(t, bad) {
+    note.textContent = t || '';
+    note.hidden = !t;
+    note.className = bad ? 'note note--bad' : 'note';
+  }
+  function ago(ms) {
+    var m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return '刚刚';
+    if (m < 60) return m + ' 分钟前';
+    var h = Math.round(m / 60);
+    if (h < 24) return h + ' 小时前';
+    var d = Math.round(h / 24);
+    if (d < 30) return d + ' 天前';
+    var mo = Math.round(d / 30);
+    if (mo < 12) return mo + ' 个月前';
+    return Math.round(mo / 12) + ' 年前';
+  }
+  function when(ms) {
+    try {
+      return new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
+    } catch (e) { return new Date(ms).toLocaleString(); }
+  }
+  // 卡片结构跟首页话题行一致；整行本身就是链接，右上角按钮必须是它的兄弟节点
+  //（链接里再嵌链接会被 HTML 解析器截断，构建期有 assertNoNestedAnchors 兜着。
+  //  注意别在这里写尖括号的锚点例子 —— 那段检查会连注释一起扫，会误报）
+  function card(p) {
+    var ts = p.us || p.ts || Date.now();
+    return '<div class="ownrow" data-n="' + p.n + '">'
+      + '<a class="thread" href="../../t/' + p.n + '/">'
+      + '<h2 class="thread__title">' + esc(p.t) + '</h2>'
+      + (p.x ? '<p class="thread__excerpt">' + esc(p.x) + '</p>' : '')
+      + '<div class="thread__meta"><span>我</span><time title="' + esc(when(ts)) + '">' + ago(ts) + '</time></div>'
+      + '</a>'
+      + '<button class="ownrow__more" type="button" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false">${ICON_MORE}</button>'
+      + '<span class="ownrow__check" aria-hidden="true"></span>'
+      + '<div class="ownrow__menu" role="menu" hidden><button type="button" role="menuitem" data-act="del">删除帖子</button></div>'
+      + '</div>';
+  }
+  function render() {
+    list.innerHTML = posts.map(card).join('');
+    list.hidden = posts.length === 0;
+    empty.hidden = posts.length > 0;
+  }
+  function closeMenus() {
+    Array.prototype.forEach.call(document.querySelectorAll('.ownrow__menu'), function (m) { m.hidden = true; });
+    Array.prototype.forEach.call(document.querySelectorAll('.ownrow__more'), function (b) { b.setAttribute('aria-expanded', 'false'); });
+  }
+  function paintSel() {
+    var n = Object.keys(picked).length;
+    Array.prototype.forEach.call(list.querySelectorAll('.ownrow'), function (row) {
+      row.classList.toggle('is-picked', !!picked[row.dataset.n]);
+    });
+    var go = document.getElementById('go');
+    if (go) { go.disabled = n === 0; go.textContent = n ? '删除 ' + n : '删除'; }
+  }
+  function setMode(on) {
+    picking = on;
+    picked = {};
+    list.classList.toggle('is-picking', on);
+    closeMenus();
+    right.innerHTML = on
+      ? '<button class="tbar__act" id="cancel" type="button">取消</button><button class="tbar__act tbar__act--go" id="go" type="button" disabled>删除</button>'
+      : '<button class="tbar__act" id="sel" type="button">多选删除</button>';
+    paintSel();
+  }
+  function guest() {
+    gate.hidden = false;
+    list.hidden = true;
+    empty.hidden = true;
+    right.hidden = true;
+  }
+  function askDelete(nums) {
+    pending = nums;
+    document.getElementById('cf__t').textContent = nums.length > 1 ? '删除这 ' + nums.length + ' 篇帖子？' : '删除这篇帖子？';
+    cf.hidden = false;
+  }
+  function doDelete() {
+    cf.hidden = true;
+    document.getElementById('cf__yes').disabled = true;
+    setNote('正在删除…');
+    fetch(API + '/delete-post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S },
+      body: JSON.stringify({ numbers: pending })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        var d = res.d || {};
+        var gone = d.deleted || [];
+        var bad = d.failed || [];
+        if (!gone.length) {
+          var msg = (bad[0] && bad[0].error) || d.error || '删除失败';
+          throw new Error(msg);
+        }
+        posts = posts.filter(function (p) { return gone.indexOf(p.n) === -1; });
+        render();
+        setMode(false);
+        setNote(gone.length + ' 篇已删除' + (bad.length ? '，' + bad.length + ' 篇没删掉：' + (bad[0].error || '') : ''), bad.length > 0);
+      })
+      .catch(function (err) { setNote(err.message || '删除失败，稍后再试', true); })
+      .then(function () { document.getElementById('cf__yes').disabled = false; });
+  }
+
+  document.getElementById('login').addEventListener('click', function () {
+    location.href = API + '/auth/login?return=' + encodeURIComponent(location.origin + location.pathname);
+  });
+  right.addEventListener('click', function (e) {
+    var b = e.target;
+    while (b && b !== right && b.tagName !== 'BUTTON') b = b.parentNode;
+    if (!b || b.tagName !== 'BUTTON') return;
+    if (b.id === 'sel') { setMode(true); }
+    else if (b.id === 'cancel') { setMode(false); }
+    else if (b.id === 'go') {
+      var nums = Object.keys(picked).map(Number);
+      if (nums.length) askDelete(nums);
+    }
+  });
+  list.addEventListener('click', function (e) {
+    var row = e.target;
+    while (row && row !== list && !(row.classList && row.classList.contains('ownrow'))) row = row.parentNode;
+    if (!row || row === list) return;
+    var act = e.target.getAttribute && e.target.getAttribute('data-act');
+    if (act === 'del') { e.preventDefault(); askDelete([Number(row.dataset.n)]); return; }
+    if (e.target.classList && e.target.classList.contains('ownrow__more')) {
+      e.preventDefault();
+      var m = row.querySelector('.ownrow__menu');
+      var wasHidden = m.hidden;
+      closeMenus();
+      m.hidden = !wasHidden;
+      e.target.setAttribute('aria-expanded', wasHidden ? 'true' : 'false');
+      return;
+    }
+    if (picking) {
+      e.preventDefault();
+      var n = row.dataset.n;
+      if (picked[n]) { delete picked[n]; } else { picked[n] = 1; }
+      paintSel();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!(e.target.closest && e.target.closest('.ownrow'))) closeMenus();
+  });
+  document.getElementById('cf__no').addEventListener('click', function () { cf.hidden = true; pending = []; });
+  document.getElementById('cf__yes').addEventListener('click', doDelete);
+  cf.addEventListener('click', function (e) { if (e.target === cf) { cf.hidden = true; pending = []; } });
+
+  if (!S) { guest(); return; }
+  fetch(API + '/my-posts', { headers: { Authorization: 'Bearer ' + S } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !d.ok) { forget(); guest(); return; }
+      gate.hidden = true;
+      right.hidden = false;
+      posts = d.posts || [];
+      render();
+    })
+    .catch(guest);
+})();
+</script>`;
+  return shell({
+    title: `我的发帖 — ${SITE.name}`,
+    description: '管理你自己发过的帖子',
+    body,
+    base,
+    pageClass: 'page-myposts',
+    script,
+    bare: true,
+    fab: false,
+    navOn: 'me',
   });
 }
 
@@ -743,6 +1077,7 @@ function renderSearch(discussions) {
     script,
     bare: true,
     fab: false,
+    navOn: 'home',
   });
 }
 
@@ -758,7 +1093,7 @@ function render404() {
     <p>链接可能拼错了，或者帖子已经被删掉。</p>
     <a class="btn" href="/">回到论坛首页</a>
   </section>`;
-  return shell({ title: `页面不存在 — ${SITE.name}`, description: '404', body });
+  return shell({ title: `页面不存在 — ${SITE.name}`, description: '404', body, nav: false });
 }
 
 /**
@@ -902,6 +1237,7 @@ async function main() {
   rmSync(join(ROOT, 't'), { recursive: true, force: true });
   rmSync(join(ROOT, 'post'), { recursive: true, force: true });
   rmSync(join(ROOT, 'search'), { recursive: true, force: true });
+  rmSync(join(ROOT, 'me'), { recursive: true, force: true });
   rmSync(join(ROOT, 'index.html'), { force: true });
   rmSync(join(ROOT, '404.html'), { force: true });
 
@@ -912,6 +1248,8 @@ async function main() {
   writePage('404.html', render404(), '404.html');
   writePage(join('post', 'index.html'), renderCompose(), 'post/index.html');
   writePage(join('search', 'index.html'), renderSearch(discussions), 'search/index.html');
+  writePage(join('me', 'index.html'), renderMe(), 'me/index.html');
+  writePage(join('me', 'posts', 'index.html'), renderMyPosts(), 'me/posts/index.html');
   writeFileSync(join(ROOT, '.nojekyll'), '');
   mkdirSync(join(ROOT, 'assets'), { recursive: true });
 

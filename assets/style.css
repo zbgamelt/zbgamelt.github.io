@@ -333,6 +333,133 @@ main { padding: 46px 0 72px; }
   .sbar__input, .field input, .field textarea { font-size: 16px; }
 }
 
+/* ── 底部导航（首页 / 我的）───────────── */
+:root { --nav-h: 56px; --danger: #e5484d; }
+
+.bnav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(11, 12, 14, .92);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+}
+.bnav__item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; color: var(--muted); font-size: 11px; line-height: 1;
+}
+.bnav__item:hover { color: var(--text); }
+.bnav__item.is-on { color: var(--accent); }
+
+/* 有底部栏时：正文底部留出空间、发帖悬浮球上移，别被压在栏下面 */
+body.has-nav main { padding-bottom: calc(var(--nav-h) + 42px); }
+body.has-nav .fab { bottom: calc(var(--nav-h) + 22px); }
+
+/* ── 标题栏带右侧操作（「我的发帖」页）────── */
+.page-myposts main { padding-top: 0; }
+.page-myposts .tbar { top: 0; }
+/* 左右两侧等宽，中间的标题才是真居中 */
+.tbar--act .tbar__back { min-width: 76px; justify-content: flex-start; }
+.tbar--act .tbar__label { margin-right: 0; }
+.tbar__right { flex: none; min-width: 76px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+.tbar__act {
+  background: none; border: 0; padding: 6px 4px; margin: 0;
+  font: inherit; font-size: 13.5px; color: var(--muted); cursor: pointer; white-space: nowrap;
+}
+.tbar__act:hover { color: var(--text); }
+.tbar__act--go { color: var(--accent); font-weight: 650; }
+.tbar__act[disabled] { color: #4d545c; cursor: default; }
+
+/* ── 「我的」页 ─────────────────────────── */
+.me { padding-top: 8px; }
+.me__id { display: flex; align-items: center; gap: 14px; margin: 0 0 30px; }
+.me__avatar { width: 64px; height: 64px; border-radius: 50%; background: #24272c; object-fit: cover; flex: none; }
+.me__name { font-size: 18px; font-weight: 650; color: var(--text-strong); overflow-wrap: anywhere; }
+.me__row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 0; border-bottom: 1px solid var(--border);
+  font-size: 15.5px; color: var(--text);
+}
+.me__row:hover { color: var(--accent); }
+.me__chev { color: #6b727c; font-size: 19px; line-height: 1; }
+.me__foot { margin: 24px 0 0; }
+.me__out {
+  background: none; border: 0; padding: 0;
+  color: var(--muted); font: inherit; font-size: 13.5px; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.me__out:hover { color: var(--text); }
+
+/* ── 我的帖子：卡片 + 右上角 3 点菜单 + 勾选 ── */
+.ownrow { position: relative; }
+/* 右边多留一点，别让文字钻到 3 点按钮下面（整行是铺到屏边的） */
+.ownrow .thread { padding-right: 46px; }
+.ownrow:last-child .thread { border-bottom: none; }
+.ownrow__more {
+  position: absolute; top: 6px; right: -6px; z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px;
+  background: none; color: #6b727c; cursor: pointer;
+}
+.ownrow__more:hover { color: var(--text); background: var(--card-2); }
+.ownrow__menu {
+  position: absolute; top: 40px; right: -6px; z-index: 8;
+  min-width: 150px; padding: 6px;
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .55);
+}
+.ownrow__menu button {
+  display: block; width: 100%; padding: 9px 12px; border: 0; border-radius: 8px;
+  background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.ownrow__menu button:hover { background: var(--card-2); color: var(--danger); }
+.ownrow__check {
+  position: absolute; right: -2px; top: 50%; transform: translateY(-50%);
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid var(--border-strong); background: #101215;
+  display: none; z-index: 2;
+}
+.list.is-picking .ownrow__check { display: block; }
+.list.is-picking .ownrow__more { display: none; }
+.list.is-picking .ownrow { cursor: pointer; }
+.list.is-picking .ownrow.is-picked .ownrow__check { background: var(--accent); border-color: var(--accent); }
+.list.is-picking .ownrow.is-picked .ownrow__check::after {
+  content: ''; position: absolute; left: 6px; top: 6px;
+  width: 9px; height: 5px;
+  border-left: 2px solid var(--accent-fg); border-bottom: 2px solid var(--accent-fg);
+  transform: rotate(-45deg);
+}
+
+/* 操作结果提示 */
+.note { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+.note--bad { color: #d9a03a; }
+
+/* ── 删除确认 ─────────────────────────── */
+.confirm {
+  position: fixed; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(6, 7, 9, .74);
+}
+.confirm[hidden] { display: none; }
+.confirm__box {
+  width: 100%; max-width: 340px; padding: 22px 22px 18px;
+  background: var(--card); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: 0 20px 50px rgba(0, 0, 0, .6);
+}
+.confirm__box h2 { margin: 0 0 8px; font-size: 17px; color: var(--text-strong); }
+.confirm__box p { margin: 0 0 20px; color: var(--muted); font-size: 13.5px; }
+.confirm__foot { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm__foot .btn { padding: 9px 18px; font-size: 14px; }
+.btn--danger { background: var(--danger); color: #fff; }
+.btn--danger:hover { color: #fff; filter: brightness(1.08); }
+
+@media (max-width: 560px) {
+  body.has-nav main { padding-bottom: calc(var(--nav-h) + 32px); }
+  body.has-nav .fab { right: 16px; bottom: calc(var(--nav-h) + 12px); }
+  .ownrow .thread { padding-right: 42px; }
+}
+
 /* ── 分隔线一律铺满整屏 ───────────────────────────────
    这些横线的载体向左右各外扩 .wrap 的 22px 内边距，线的两头就顶到屏边；
    文字内容仍然保持 22px 内缩，整页不会被撑出横向滚动条。
@@ -345,6 +472,8 @@ main { padding: 46px 0 72px; }
 .md hr,         /* 正文里的分隔线 */
 .page-thread .tbar,
 .page-compose .tbar,
+.page-myposts .tbar,
+.me__row,
 .page-thread .post,
 .page-thread .post__title {
   margin-left: -22px;
