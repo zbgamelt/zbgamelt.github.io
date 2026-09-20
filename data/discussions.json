@@ -7,6 +7,7 @@
       "createdAt": "2026-09-20T07:32:51Z",
       "updatedAt": "2026-09-20T07:32:51Z",
       "bodyHTML": "<p dir=\"auto\">111111111</p>\n<hr>\n<blockquote>\n<p dir=\"auto\">由 <strong>11111111111</strong> 通过论坛页面发布 · 2026-09-20 07:32 UTC</p>\n</blockquote>",
+      "upvoteCount": 1,
       "author": {
         "login": "zbgamelt",
         "url": "https://github.com/zbgamelt",
@@ -28,6 +29,7 @@
       "createdAt": "2026-09-20T04:04:21Z",
       "updatedAt": "2026-09-20T06:58:01Z",
       "bodyHTML": "\n<h2 dir=\"auto\">👋 Welcome!</h2>\n<p dir=\"auto\">We’re using Discussions as a place to connect with other members of our community. We hope that you:</p>\n<ul dir=\"auto\">\n<li>Ask questions you’re wondering about.</li>\n<li>Share ideas.</li>\n<li>Engage with other community members.</li>\n<li>Welcome others and are open-minded. Remember that this is a community we<br>\nbuild together 💪.</li>\n</ul>\n<p dir=\"auto\">To get started, comment below with an introduction of yourself and tell us about what you do with this community.</p>\n",
+      "upvoteCount": 1,
       "author": {
         "login": "zbgamelt",
         "url": "https://github.com/zbgamelt",
@@ -44,6 +46,7 @@
             "createdAt": "2026-09-20T06:58:01Z",
             "bodyHTML": "<p dir=\"auto\">1</p>",
             "isAnswer": false,
+            "upvoteCount": 1,
             "author": {
               "login": "zbgame001",
               "url": "https://github.com/zbgame001",

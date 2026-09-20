@@ -21,22 +21,18 @@
   </div>
 </header>
 <main id="main" class="wrap">
-  <nav class="crumb"><a href="../../">← 全部话题</a></nav>
+  <header class="tbar">
+    <a class="tbar__back" href="../../" aria-label="返回话题列表"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1 class="tbar__title">Welcome to zbgamelt.github.io Discussions!</h1>
+  </header>
   <article class="post">
-    <div class="thread__top">
-      <span class="chip">📣 Announcements</span>
-      <span class="thread__num">#1</span>
-    </div>
-    <h1 class="post__title">Welcome to zbgamelt.github.io Discussions!</h1>
-    <header class="post__head">
-      <img class="avatar" style="--s:40px" src="https://avatars.githubusercontent.com/u/297119334?v=4&s=80" width="40" height="40" alt="" loading="lazy">
-      <div class="post__who">
-        <a class="author" href="https://github.com/zbgamelt" target="_blank" rel="noopener">zbgamelt</a>
-        <time datetime="2026-09-20T04:04:21Z">2026/09/20 12:04</time>
-      </div>
+    <div class="post__meta">
+      <img class="avatar" style="--s:24px" src="https://avatars.githubusercontent.com/u/297119334?v=4&s=48" width="24" height="24" alt="" loading="lazy">
+      <a class="author" href="https://github.com/zbgamelt" target="_blank" rel="noopener">zbgamelt</a>
+      <time datetime="2026-09-20T04:04:21Z">2026/09/20 12:04</time>
       <a class="post__src" href="https://github.com/zbgamelt/zbgamelt.github.io/discussions/1" target="_blank" rel="noopener">在 GitHub 查看</a>
-    </header>
-    <div class="md">
+    </div>
+    <div class="md post__body">
 <h2 dir="auto">👋 Welcome!</h2>
 <p dir="auto">We’re using Discussions as a place to connect with other members of our community. We hope that you:</p>
 <ul dir="auto">
@@ -49,44 +45,153 @@ build together 💪.</li>
 <p dir="auto">To get started, comment below with an introduction of yourself and tell us about what you do with this community.</p>
 </div>
   </article>
-  <section class="replies">
-    <h2 class="replies__title">回复 <span>1</span></h2>
-    <div class="giscus"></div>
-    <script src="https://giscus.app/client.js"
-      data-repo="zbgamelt/zbgamelt.github.io"
-      data-repo-id="R_kgDOUiCTAQ"
-      data-category="General"
-      data-category-id="DIC_kwDOUiCTAc4DF_c1"
-      data-mapping="number"
-      data-term="1"
-      data-reactions-enabled="1"
-      data-emit-metadata="0"
-      data-input-position="top"
-      data-theme="dark"
-      data-lang="zh-CN"
-      data-loading="lazy"
-      crossorigin="anonymous"
-      async></script>
-    <noscript>
-    <article class="reply">
-      <header class="reply__head">
-        <img class="avatar" style="--s:34px" src="https://avatars.githubusercontent.com/u/255538890?v=4&s=68" width="34" height="34" alt="" loading="lazy">
-        <div class="post__who">
-          <a class="author" href="https://github.com/zbgame001" target="_blank" rel="noopener">zbgame001</a>
-          <time datetime="2026-09-20T06:58:01Z">2026/09/20 14:58</time>
-        </div>
+  <section class="cmts">
+    <h2 class="cmts__title">评论 <span id="ccount">1</span></h2>
+    <div class="cbox">
+      <button class="cbox__emoji" type="button" id="cbe" aria-label="选表情">😊</button>
+      <input class="cbox__input" id="cinput" type="text" placeholder="说点什么…" maxlength="500" autocomplete="off">
+      <button class="cbox__send" type="button" id="csend">发送</button>
+    </div>
+    <div class="emoji-strip" id="estrip" hidden></div>
+    <p class="cbox__hint" id="chint" hidden></p>
+    <div class="cmts__list" id="clist">
+    <article class="cmt" id="c1">
+      <header class="cmt__head">
+        <img class="avatar" style="--s:28px" src="https://avatars.githubusercontent.com/u/255538890?v=4&s=56" width="28" height="28" alt="" loading="lazy">
+        <span class="cmt__name">zbgame001</span>
         
+        <time datetime="2026-09-20T06:58:01Z">2026/09/20 14:58</time>
       </header>
-      <div class="md"><p dir="auto">1</p></div>
+      <div class="md cmt__body"><p dir="auto">1</p></div>
+      <footer class="cmt__foot">
+        <span class="cmt__tools">
+          <span class="cmt__up" title="GitHub 上收到的赞">↑ 1</span>
+          <button class="cmt__emoji" type="button" aria-label="选表情">😊</button>
+        </span>
+        <button class="cmt__reply" type="button" data-reply="zbgame001">回复</button>
+      </footer>
     </article>
-    </noscript>
-
-  </section>
-  <section class="cta">
-    <p class="cta__hint">用 GitHub 账号登录后可直接在本页评论；你在 GitHub 里发的回复也会同步到这儿。 <a href="https://github.com/zbgamelt/zbgamelt.github.io/discussions/1" target="_blank" rel="noopener">在 GitHub 上看这条讨论</a></p>
+    </div>
   </section>
 </main>
 <a class="fab" href="../../post/" aria-label="发新帖" title="发新帖"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8.75 2.5v4.75H13.5v1.5H8.75v4.75h-1.5V8.75H2.5v-1.5h4.75V2.5z"/></svg></a>
+<script>
+(function () {
+  // 相对时间在浏览器里算，避免每次构建都因为“多久之前”变了而提交一次
+  function ago(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return null;
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return '刚刚';
+    if (m < 60) return m + ' 分钟前';
+    var h = Math.round(m / 60);
+    if (h < 24) return h + ' 小时前';
+    var dd = Math.round(h / 24);
+    if (dd < 30) return dd + ' 天前';
+    var mo = Math.round(dd / 30);
+    if (mo < 12) return mo + ' 个月前';
+    return Math.round(mo / 12) + ' 年前';
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.cmt__head time[datetime]'), function (el) {
+    var rel = ago(el.getAttribute('datetime'));
+    if (rel) el.textContent = rel;
+  });
 
+  var input = document.getElementById('cinput');
+  var sendBtn = document.getElementById('csend');
+  var hint = document.getElementById('chint');
+  var strip = document.getElementById('estrip');
+  var human = document.getElementById('chuman');
+  var API = "";
+  var NUM = 1;
+
+  var EMOJIS = ['😀','😄','😁','😂','🤣','😊','😍','🤔','😅','😭','😡','🥲','👍','👎','🙏','🎉','❤️','🔥','⭐','🐟','☕','😴'];
+  if (strip) {
+    strip.innerHTML = EMOJIS.map(function (e) {
+      return '<button type="button" class="emoji-strip__i">' + e + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(strip.children, function (b) {
+      b.addEventListener('click', function () { insert(b.textContent); });
+    });
+  }
+  function insert(txt) {
+    if (!input) return;
+    var s = input.selectionStart == null ? input.value.length : input.selectionStart;
+    var e = input.selectionEnd == null ? input.value.length : input.selectionEnd;
+    input.value = input.value.slice(0, s) + txt + input.value.slice(e);
+    input.focus();
+    input.selectionStart = input.selectionEnd = s + txt.length;
+  }
+  function toggleStrip() { if (strip) strip.hidden = !strip.hidden; }
+  function focusInput() {
+    if (!input) return;
+    input.focus();
+    try { input.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+  }
+  function say(msg) {
+    if (!hint) return;
+    if (!msg) { hint.hidden = true; hint.textContent = ''; return; }
+    hint.textContent = msg;
+    hint.hidden = false;
+  }
+  function nick() {
+    try { return localStorage.getItem('forumNick') || ''; } catch (e) { return ''; }
+  }
+
+  // 「回复」：把 @对方 预填进输入框；「😊」：展开表情条往评论里插表情
+  Array.prototype.forEach.call(document.querySelectorAll('.cmt__reply'), function (b) {
+    b.addEventListener('click', function () {
+      if (!input) return;
+      input.value = '回复 @' + (b.getAttribute('data-reply') || '') + '：';
+      focusInput();
+      say('');
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.cmt__emoji'), function (b) {
+    b.addEventListener('click', function () { toggleStrip(); focusInput(); });
+  });
+  var cbe = document.getElementById('cbe');
+  if (cbe) cbe.addEventListener('click', function () { toggleStrip(); if (input) input.focus(); });
+
+  function submit() {
+    if (!input) return;
+    var text = input.value.trim();
+    if (!text) { focusInput(); return; }
+    if (!API) { say('评论接口正在接通中 —— 先点右上「在 GitHub 查看」去那边评论。'); return; }
+    if (text.length < 2) { say('多写两个字吧'); return; }
+    var ts = document.querySelector('[name="cf-turnstile-response"]');
+    var token = ts ? ts.value : '';
+    if (!token) {
+      if (human) human.hidden = false;
+      say('第一次评论过一下人机验证，点一下下面的框再发送');
+      return;
+    }
+    if (sendBtn) sendBtn.disabled = true;
+    say('发送中…');
+    fetch(API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ number: NUM, nickname: nick(), body: text, turnstileToken: token }),
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }).catch(function () { return { ok: false, j: {} }; }); })
+      .then(function (res) {
+        if (sendBtn) sendBtn.disabled = false;
+        if (window.turnstile) window.turnstile.reset();
+        if (!res.ok) { say(res.j.error || '发送失败，稍后再试'); return; }
+        input.value = '';
+        say('已提交，刷新页面就能看到你的评论。');
+      })
+      .catch(function () {
+        if (sendBtn) sendBtn.disabled = false;
+        say('网络不太顺，稍后再试');
+      });
+  }
+  if (sendBtn) sendBtn.addEventListener('click', submit);
+  if (input) input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); submit(); }
+  });
+  if (!API) say('评论功能正在接通中 —— 先点右上「在 GitHub 查看」去那边评论。');
+})();
+</script>
 </body>
 </html>
