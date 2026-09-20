@@ -231,6 +231,19 @@ function webAuthor(d) {
   return m ? m[1].trim() : '';
 }
 
+/**
+ * 网页发帖的落款块（后端在正文末尾追加的「<hr> + > 由 **昵称** 通过论坛页面发布 · 时间」）
+ * 只在 GitHub 那边有意义：论坛页面里昵称已经显示在标题下方那行了，再挂一遍是重复。
+ * 注意只在「渲染」时去掉 —— 数据里这行必须留着，webAuthor() 靠它读发帖昵称。
+ */
+function stripWebByline(html) {
+  return String(html || '')
+    .replace(/\s*<hr\s*\/?>\s*<blockquote>[\s\S]*?通过论坛页面发布[\s\S]*?<\/blockquote>\s*$/i, '')
+    .replace(/\s*<blockquote>[\s\S]*?通过论坛页面发布[\s\S]*?<\/blockquote>\s*$/i, '')
+    .replace(/\s*<p[^>]*>\s*由\s*.{1,24}?\s*通过论坛页面发布[\s\S]*?<\/p>\s*$/i, '')
+    .trim();
+}
+
 /** 正文纯文本，用于摘要和搜索匹配；网页发帖的落款行排掉，不让它混进去。 */
 function bodyText(d) {
   return text(d.bodyHTML || '')
@@ -259,7 +272,7 @@ function authorLabel(d, linked = true) {
  */
 function threadRow(d, base) {
   const cat = d.category?.name ?? '';
-  const excerpt = truncate(text(d.bodyHTML), 96);
+  const excerpt = truncate(bodyText(d), 96);
   const ts = new Date(d.updatedAt).getTime();
   return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}" data-ts="${ts}">
       <h2 class="thread__title">${esc(d.title)}</h2>
@@ -458,7 +471,7 @@ function renderThread(d) {
       ${authorLabel(d)}
       <time datetime="${esc(d.createdAt)}">${esc(fmtDate(d.createdAt))}</time>
     </div>
-    <div class="md post__body">${sanitize(d.bodyHTML)}</div>
+    <div class="md post__body">${sanitize(stripWebByline(d.bodyHTML))}</div>
   </article>
   <section class="replies">
     <h2 class="replies__title">回复 <span>${comments.length}</span></h2>
@@ -468,7 +481,7 @@ ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人�
 `;
   return shell({
     title: `${d.title} — ${SITE.name}`,
-    description: truncate(text(d.bodyHTML), 140),
+    description: truncate(bodyText(d), 140),
     body,
     base: '../../',
     pageClass: 'page-thread',
