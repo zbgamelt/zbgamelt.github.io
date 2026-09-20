@@ -26,7 +26,8 @@
             "login": "mawqer123",
             "url": "https://github.com/mawqer123",
             "avatarUrl": "https://avatars.githubusercontent.com/u/1?v=4"
-          }
+          },
+          "upvoteCount": 0
         },
         {
           "createdAt": "2026-09-20T01:40:00Z",
@@ -36,10 +37,12 @@
             "login": "zbgamelt",
             "url": "https://github.com/zbgamelt",
             "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
-          }
+          },
+          "upvoteCount": 1
         }
       ]
-    }
+    },
+    "upvoteCount": 4
   },
   {
     "number": 41,
@@ -68,10 +71,12 @@
             "login": "zbgamelt",
             "url": "https://github.com/zbgamelt",
             "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
-          }
+          },
+          "upvoteCount": 1
         }
       ]
-    }
+    },
+    "upvoteCount": 2
   },
   {
     "number": 40,
@@ -100,10 +105,12 @@
             "login": "newbie-live",
             "url": "https://github.com/newbie-live",
             "avatarUrl": "https://avatars.githubusercontent.com/u/2?v=4"
-          }
+          },
+          "upvoteCount": 2
         }
       ]
-    }
+    },
+    "upvoteCount": 5
   },
   {
     "number": 39,
@@ -132,7 +139,8 @@
             "login": "collector-w",
             "url": "https://github.com/collector-w",
             "avatarUrl": "https://avatars.githubusercontent.com/u/3?v=4"
-          }
+          },
+          "upvoteCount": 3
         },
         {
           "createdAt": "2026-09-17T02:05:00Z",
@@ -142,10 +150,12 @@
             "login": "zbgamelt",
             "url": "https://github.com/zbgamelt",
             "avatarUrl": "https://avatars.githubusercontent.com/u/297119334?v=4"
-          }
+          },
+          "upvoteCount": 0
         }
       ]
-    }
+    },
+    "upvoteCount": 1
   },
   {
     "number": 38,
@@ -174,7 +184,8 @@
             "login": "collector-w",
             "url": "https://github.com/collector-w",
             "avatarUrl": "https://avatars.githubusercontent.com/u/3?v=4"
-          }
+          },
+          "upvoteCount": 0
         },
         {
           "createdAt": "2026-09-15T11:50:00Z",
@@ -184,7 +195,8 @@
             "login": "mawqer123",
             "url": "https://github.com/mawqer123",
             "avatarUrl": "https://avatars.githubusercontent.com/u/1?v=4"
-          }
+          },
+          "upvoteCount": 1
         },
         {
           "createdAt": "2026-09-15T13:44:00Z",
@@ -194,9 +206,11 @@
             "login": "night-walker",
             "url": "https://github.com/night-walker",
             "avatarUrl": "https://avatars.githubusercontent.com/u/4?v=4"
-          }
+          },
+          "upvoteCount": 2
         }
       ]
-    }
+    },
+    "upvoteCount": 3
   }
 ]

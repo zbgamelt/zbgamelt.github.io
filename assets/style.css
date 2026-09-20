@@ -10,6 +10,7 @@
   --accent: #ffd83d;
   --accent-fg: #1a1503;
   --radius: 16px;
+  --top-h: 56px;   /* 顶栏高度：帖子页标题栏要粘在它下面 */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -150,40 +151,81 @@ main { padding: 46px 0 72px; }
 }
 .btn:hover { color: var(--accent-fg); filter: brightness(1.06); transform: translateY(-1px); }
 
-/* ── 帖子详情 ───────────────────────── */
-.crumb { margin-bottom: 22px; font-size: 13.5px; }
-.crumb a { color: var(--muted); }
-.post {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 24px 26px 8px;
+/* ── 帖子详情：标题栏 / 正文 / 评论 ────── */
+/* 标题栏：左边返回键、中间帖子标题，粘在顶栏下面 */
+.tbar {
+  position: sticky; top: var(--top-h, 56px); z-index: 4;
+  display: flex; align-items: center;
+  margin: 0 0 18px; padding: 4px 0 12px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
 }
-.post .thread__top { margin-bottom: 12px; }
-.post__title { margin: 0 0 18px; font-size: 24px; line-height: 1.35; font-weight: 650; color: var(--text-strong); letter-spacing: -.01em; overflow-wrap: anywhere; }
-.post__head, .reply__head {
-  display: flex; align-items: center; gap: 12px;
-  padding-bottom: 18px; border-bottom: 1px solid var(--border);
+.tbar__back {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; margin-left: -8px; border-radius: 10px; color: var(--text);
 }
-.reply__head { padding-bottom: 14px; margin-bottom: 14px; }
-.post__who { display: flex; flex-direction: column; line-height: 1.45; min-width: 0; flex: 1; }
-.post__who time { color: var(--muted); font-size: 12.5px; }
-.post__src { flex: none; color: var(--muted); font-size: 13px; }
+.tbar__back:hover { background: var(--card-2); color: var(--text-strong); }
+.tbar__title {
+  flex: 1; margin: 0 26px 0 0; font-size: 16px; font-weight: 600; line-height: 1.4;
+  color: var(--text-strong); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
-.replies { margin-top: 34px; }
-.replies__title { font-size: 15px; margin: 0 0 16px; color: var(--muted); font-weight: 600; }
-.replies__title span { color: var(--text-strong); }
-.replies__none { color: var(--muted); font-size: 14px; }
-.reply {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 18px 22px; margin-bottom: 12px;
+/* 正文：无外框、紧贴 */
+.post { padding: 0 0 20px; border-bottom: 1px solid var(--border); }
+.post__meta { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; color: var(--muted); font-size: 12.5px; }
+.post__src { margin-left: auto; flex: none; color: var(--muted); font-size: 12.5px; }
+.post__src:hover { color: var(--accent); }
+.post .post__body { padding: 0; }
+
+/* 评论区 */
+.cmts { margin-top: 22px; }
+.cmts__title { margin: 0 0 14px; font-size: 15px; font-weight: 600; color: var(--text-strong); }
+.cmts__title span { color: var(--muted); font-weight: 400; }
+.cmts__none { color: var(--muted); font-size: 13.5px; padding: 20px 0; }
+
+/* app 式输入框 */
+.cbox {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 6px 5px 12px; margin: 0 0 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px;
 }
-.reply--answer { border-color: #3a3520; background: #17150f; }
+.cbox:focus-within { border-color: var(--border-strong); }
+.cbox__emoji { flex: none; padding: 4px; background: none; border: none; font-size: 17px; line-height: 1; cursor: pointer; border-radius: 50%; }
+.cbox__input { flex: 1; min-width: 0; padding: 8px 2px; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 14.5px; }
+.cbox__input::placeholder { color: #5b626b; }
+.cbox__send {
+  flex: none; padding: 8px 16px; border: none; border-radius: 999px;
+  background: var(--accent); color: var(--accent-fg);
+  font: inherit; font-size: 14px; font-weight: 650; cursor: pointer;
+}
+.cbox__send:disabled { opacity: .5; cursor: default; }
+.cbox__hint { margin: -4px 0 12px; color: var(--muted); font-size: 12.5px; }
+.cbox__human { margin: 0 0 12px; }
+.emoji-strip {
+  display: flex; flex-wrap: wrap; gap: 2px; padding: 8px 10px; margin: 0 0 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+.emoji-strip__i { padding: 4px; background: none; border: none; font-size: 19px; line-height: 1; cursor: pointer; border-radius: 8px; }
+.emoji-strip__i:hover { background: var(--card-2); }
+
+/* 评论行：无外框、紧贴，行间分隔线 */
+.cmt { padding: 15px 0; border-bottom: 1px solid var(--border); }
+.cmt:last-child { border-bottom: none; }
+.cmt__head { display: flex; align-items: center; gap: 9px; margin: 0 0 9px; }
+.cmt__name { flex: 1; min-width: 0; color: var(--text-strong); font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmt__head time { flex: none; color: #6b727c; font-size: 12.5px; }
+.cmt .cmt__body { padding: 0; font-size: 14px; }
+.cmt__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 9px; }
+.cmt__tools { display: flex; align-items: center; gap: 14px; }
+.cmt__up { color: var(--muted); font-size: 12.5px; }
+.cmt__emoji, .cmt__reply { padding: 2px; background: none; border: none; font: inherit; color: var(--muted); font-size: 12.5px; cursor: pointer; }
+.cmt__emoji { font-size: 15px; line-height: 1; }
+.cmt__emoji:hover, .cmt__reply:hover { color: var(--text-strong); }
+
 .badge {
   flex: none; padding: 3px 10px; border-radius: 999px; font-size: 11.5px;
   background: rgba(255, 216, 61, .13); color: var(--accent); border: 1px solid rgba(255, 216, 61, .28);
 }
-
-.cta { margin-top: 32px; text-align: center; }
-.cta__hint { margin: 14px 0 0; color: var(--muted); font-size: 12.5px; }
 
 /* ── 正文排版 ───────────────────────── */
 .md { padding: 20px 0 14px; overflow-wrap: anywhere; }
@@ -220,11 +262,11 @@ main { padding: 46px 0 72px; }
 .foot__inner { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; color: #6b727c; font-size: 12.5px; }
 
 @media (max-width: 560px) {
+  :root { --top-h: 52px; }
   main { padding: 30px 0 56px; }
   .thread { padding: 14px 0; }
-  .post { padding: 20px 18px 6px; }
-  .post__title { font-size: 20px; }
-  .reply { padding: 16px; }
+  .cmt { padding: 14px 0; }
+  .tbar__title { font-size: 15px; }
   .top__inner { min-height: 52px; }
   .fab { right: 16px; bottom: 16px; }
 }
