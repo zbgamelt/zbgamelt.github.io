@@ -172,8 +172,8 @@ main { padding: 46px 0 72px; }
 
 /* 帖子页不要全站顶栏（主播模拟器mod + 搜索）：标题栏自己就是顶栏 */
 .page-thread .top { display: none; }
-.page-thread main { padding-top: 0; }
-.page-thread .tbar { top: 0; }
+.page-thread main, .page-compose main { padding-top: 0; }
+.page-thread .tbar, .page-compose .tbar { top: 0; }
 
 /* 第二行：帖子标题（在标题栏分割线之下） */
 .post__title {
@@ -263,7 +263,6 @@ main { padding: 46px 0 72px; }
 /* 只清掉上下的间距（吸顶栏要贴到顶部），左右留白必须留住 ——
    用 padding 简写会把 .wrap 的左右 22px 一起清零，内容就贴屏边被裁了。 */
 .page-search main { padding-top: 0; padding-bottom: 40px; }
-.page-compose main { padding-top: 14px; }   /* 没有顶栏了，留 14px 呼吸空间，别让「← 全部话题」贴着上沿 */
 .sbar {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 0; border-bottom: 1px solid var(--border);
@@ -346,6 +345,7 @@ main { padding: 46px 0 72px; }
 .sitem,         /* 搜索页结果行 */
 .md hr,         /* 正文里的分隔线 */
 .page-thread .tbar,
+.page-compose .tbar,
 .page-thread .post,
 .page-thread .post__title {
   margin-left: -22px;
