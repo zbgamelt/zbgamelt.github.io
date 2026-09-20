@@ -1,0 +1,476 @@
+#!/usr/bin/env node
+/**
+ * GitHub Discussions → 静态论坛（零依赖）
+ *
+ *   node scripts/build.mjs            有 GITHUB_TOKEN 时拉真实 Discussions，否则回退缓存/样例
+ *   node scripts/build.mjs --sample   强制使用预览样例数据（本地看设计用）
+ *
+ * 产物直接落在仓库根目录（index.html / t/<编号>/index.html / 404.html），
+ * 因为 zbgamelt.github.io 是「用户站点」仓库，Pages 从 main 分支根目录发布。
+ */
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_FULL = process.env.GITHUB_REPOSITORY || 'zbgamelt/zbgamelt.github.io';
+const [OWNER, NAME] = REPO_FULL.split('/');
+const REPO_URL = `https://github.com/${OWNER}/${NAME}`;
+const DISCUSS_URL = `${REPO_URL}/discussions`;
+const NEW_POST_URL = `${DISCUSS_URL}/new`;
+
+const SITE = loadSiteConfig();
+const token = (process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '').trim();
+const forceSample = process.argv.includes('--sample');
+const forceEmpty = process.argv.includes('--empty');
+const TZ = 'Asia/Shanghai';
+
+// ────────────────────────────────────────── 数据
+
+async function fetchDiscussions() {
+  const query = `query($owner:String!, $name:String!, $cursor:String) {
+    repository(owner:$owner, name:$name) {
+      discussions(first:50, after:$cursor, orderBy:{field:UPDATED_AT, direction:DESC}) {
+        totalCount
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          number title url createdAt updatedAt bodyHTML
+          author { login url avatarUrl }
+          category { name emoji }
+          comments(first:50) {
+            totalCount
+            nodes { createdAt bodyHTML isAnswer author { login url avatarUrl } }
+          }
+        }
+      }
+    }
+  }`;
+  const all = [];
+  let cursor = null;
+  for (let page = 0; page < 10; page++) {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        authorization: `bearer ${token}`,
+        'content-type': 'application/json',
+        'user-agent': 'zbgamelt-forum-builder',
+      },
+      body: JSON.stringify({ query, variables: { owner: OWNER, name: NAME, cursor } }),
+    });
+    const json = await res.json();
+    if (json.errors) throw new Error(`GraphQL: ${JSON.stringify(json.errors)}`);
+    const d = json.data?.repository?.discussions;
+    if (!d) throw new Error('拿不到 discussions（仓库可能还没开启 Discussions）');
+    all.push(...d.nodes);
+    if (!d.pageInfo.hasNextPage) break;
+    cursor = d.pageInfo.endCursor;
+  }
+  return all;
+}
+
+async function loadData() {
+  const cachePath = join(ROOT, 'data', 'discussions.json');
+  const samplePath = join(ROOT, 'data', 'sample-discussions.json');
+
+  if (forceEmpty) {
+    console.log('! 按 --empty 构建：只输出空状态页（不发布任何内容）');
+    return { discussions: [], source: 'empty' };
+  }
+  if (!forceSample && token) {
+    let nodes;
+    try {
+      nodes = await fetchDiscussions();
+    } catch (err) {
+      // 仓库刚建好、Discussions 还没开的时候，这里会报错；
+      // 那不是构建故障，先发个空状态页，等开了再自动填内容。
+      if (/discussion/i.test(err.message)) {
+        console.log(`! ${err.message}`);
+        console.log('! 先渲染空状态页（Discussions 一开，下次构建就会自动填充）');
+        return { discussions: [], source: 'empty' };
+      }
+      throw err;
+    }
+    writeFileSync(cachePath, JSON.stringify({ fetchedAt: new Date().toISOString(), discussions: nodes }, null, 2));
+    console.log(`✓ 从 GitHub 拉取 ${nodes.length} 个讨论`);
+    return { discussions: nodes, source: 'github' };
+  }
+  if (!forceSample && existsSync(cachePath)) {
+    const cached = JSON.parse(readFileSync(cachePath, 'utf8'));
+    console.log(`✓ 用缓存数据（${cached.discussions.length} 个讨论，抓取于 ${cached.fetchedAt}）`);
+    return { discussions: cached.discussions, source: 'cache' };
+  }
+  const sample = JSON.parse(readFileSync(samplePath, 'utf8'));
+  console.log(`! 用预览样例数据（${sample.length} 个讨论）— 不是真实内容`);
+  return { discussions: sample, source: 'sample' };
+}
+
+// ────────────────────────────────────────── 小工具
+
+const esc = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Discussions 的 bodyHTML 由 GitHub 渲染，仍按不可信内容处理 */
+const sanitize = (html) =>
+  String(html ?? '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<(iframe|object|embed|form)[\s\S]*?<\/\1>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/(href|src)\s*=\s*"javascript:[^"]*"/gi, '$1="#"');
+
+const text = (html) =>
+  String(html ?? '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const truncate = (s, n) => (s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, '') + '…');
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(iso));
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.round(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  const d = Math.round(h / 24);
+  if (d < 30) return `${d} 天前`;
+  const mo = Math.round(d / 30);
+  if (mo < 12) return `${mo} 个月前`;
+  return `${Math.round(mo / 12)} 年前`;
+}
+
+const slug = String(SITE.name).replace(/\s+/g, '-').toLowerCase();
+
+// ────────────────────────────────────────── 模板
+
+const FAVICON =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0b0c0e"/><path d="M8 10.5h16v9a2 2 0 0 1-2 2h-8l-4.5 3.5V21.5H10a2 2 0 0 1-2-2z" fill="#ffd83d"/></svg>`,
+  );
+
+function shell({ title, description, body, base = '', pageClass = '', script = '' }) {
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:type" content="website">
+<link rel="icon" href="${FAVICON}">
+<link rel="stylesheet" href="${base}assets/style.css">
+</head>
+<body class="${pageClass}">
+<a class="skip" href="#main">跳到内容</a>
+<header class="top">
+  <div class="wrap top__inner">
+    <a class="brand" href="${base || './'}">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <strong>${esc(SITE.name)}</strong>
+        <small>${esc(SITE.tagline || '')}</small>
+      </span>
+    </a>
+    <nav class="top__nav">
+      <a href="${DISCUSS_URL}" target="_blank" rel="noopener">GitHub 讨论区</a>
+    </nav>
+  </div>
+</header>
+<main id="main" class="wrap">
+${body}
+</main>
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <span>帖子托管在 GitHub Discussions · 本站为只读静态镜像</span>
+    <span>构建于 ${esc(fmtDate(new Date().toISOString()))}</span>
+  </div>
+</footer>
+${script}
+</body>
+</html>
+`;
+}
+
+function avatar(a, size = 40) {
+  if (!a?.avatarUrl) {
+    return `<span class="avatar avatar--ghost" style="--s:${size}px" aria-hidden="true"></span>`;
+  }
+  return `<img class="avatar" style="--s:${size}px" src="${esc(a.avatarUrl)}${a.avatarUrl.includes('?') ? '&' : '?'}s=${size * 2}" width="${size}" height="${size}" alt="" loading="lazy">`;
+}
+
+/**
+ * linked=false 用于列表行：整行已经是 <a>，再嵌一层 <a> 会被 HTML 解析器
+ * 强行截断（嵌套锚点非法），导致行的后半截跑到卡片外面。
+ */
+function authorName(a, linked = true) {
+  if (!a?.login) return '<span class="muted">匿名</span>';
+  if (!linked) return `<span class="author">${esc(a.login)}</span>`;
+  return `<a class="author" href="${esc(a.url || `https://github.com/${a.login}`)}" target="_blank" rel="noopener">${esc(a.login)}</a>`;
+}
+
+function threadRow(d, base) {
+  const cat = d.category?.name ?? '';
+  const excerpt = truncate(text(d.bodyHTML), 96);
+  const replies = d.comments?.totalCount ?? 0;
+  return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}" data-search="${esc(`${d.title} ${cat} ${d.author?.login ?? ''} ${excerpt}`)}">
+      <div class="thread__body">
+        <div class="thread__top">
+          <span class="chip">${d.category?.emoji ? esc(d.category.emoji) + ' ' : ''}${esc(cat || '讨论')}</span>
+          <span class="thread__num">#${d.number}</span>
+        </div>
+        <h2 class="thread__title">${esc(d.title)}</h2>
+        ${excerpt ? `<p class="thread__excerpt">${esc(excerpt)}</p>` : ''}
+        <div class="thread__meta">
+          ${avatar(d.author, 22)}
+          ${authorName(d.author, false)}
+          <span class="dot">·</span>
+          <time datetime="${esc(d.updatedAt)}" title="${esc(fmtDate(d.updatedAt))}">${esc(timeAgo(d.updatedAt))}</time>
+        </div>
+      </div>
+      <div class="thread__count" aria-label="${replies} 条回复"><strong>${replies}</strong><span>回复</span></div>
+    </a>`;
+}
+
+function emptyState() {
+  return `  <section class="empty">
+    <svg class="empty__art" viewBox="0 0 220 150" role="img" aria-label="还没有帖子">
+      <ellipse cx="110" cy="132" rx="62" ry="7" fill="#ffffff" opacity=".04"/>
+      <rect x="34" y="30" width="112" height="66" rx="18" fill="#16191d" stroke="#2b2f36"/>
+      <path d="M56 96v18l20-18z" fill="#16191d" stroke="#2b2f36" stroke-linejoin="round"/>
+      <circle cx="70" cy="63" r="4.5" fill="#ffd83d"/>
+      <circle cx="90" cy="63" r="4.5" fill="#ffd83d" opacity=".55"/>
+      <circle cx="110" cy="63" r="4.5" fill="#ffd83d" opacity=".28"/>
+      <rect x="138" y="52" width="60" height="42" rx="14" fill="#101215" stroke="#24272c" stroke-dasharray="5 5"/>
+      <path d="M186 94v12l-14-12z" fill="#101215" stroke="#24272c" stroke-dasharray="5 5"/>
+    </svg>
+    <h1>这里还一张帖子都没有…</h1>
+    <p>论坛的帖子都住在 GitHub Discussions 里，第一贴要不你来开个头？</p>
+    <a class="btn" href="${NEW_POST_URL}" target="_blank" rel="noopener">去发第一帖</a>
+    <p class="empty__hint">需要 GitHub 账号 · 发完几分钟内会自动同步到这里</p>
+  </section>
+`;
+}
+
+function renderIndex(discussions) {
+  const list = discussions
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  const cats = [...new Set(list.map((d) => d.category?.name).filter(Boolean))];
+  const body =
+    list.length === 0
+      ? emptyState()
+      : `  <section class="hero">
+    <h1>${esc(SITE.desc || '最近的讨论')}</h1>
+    <p class="hero__sub">共 ${list.length} 个话题 · 全部内容来自 GitHub Discussions，静态同步。</p>
+    <div class="tools">
+      <label class="search">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>
+        <input id="q" type="search" placeholder="搜索标题 / 作者 / 内容…" autocomplete="off" aria-label="搜索话题">
+      </label>
+      <div class="chips" role="group" aria-label="按板块筛选">
+        <button class="chip chip--btn is-active" data-cat="*">全部</button>
+${cats.map((c) => `        <button class="chip chip--btn" data-cat="${esc(c)}">${esc(c)}</button>`).join('\n')}
+      </div>
+    </div>
+  </section>
+  <section class="list" id="list">
+${list.map((d) => threadRow(d, '')).join('\n')}
+  </section>
+  <p class="noresult" id="noresult" hidden>没有匹配的话题，换个词试试？</p>`;
+  const script = `<script>
+(function () {
+  var q = document.getElementById('q');
+  if (!q) return;
+  var items = Array.prototype.slice.call(document.querySelectorAll('.thread'));
+  var btns = Array.prototype.slice.call(document.querySelectorAll('.chip--btn'));
+  var noresult = document.getElementById('noresult');
+  var cat = '*';
+  function apply() {
+    var kw = q.value.trim().toLowerCase();
+    var shown = 0;
+    items.forEach(function (el) {
+      var okCat = cat === '*' || el.dataset.cat === cat;
+      var okKw = !kw || (el.dataset.search || '').toLowerCase().indexOf(kw) !== -1;
+      var ok = okCat && okKw;
+      el.hidden = !ok;
+      if (ok) shown++;
+    });
+    if (noresult) noresult.hidden = shown > 0;
+  }
+  q.addEventListener('input', apply);
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      cat = b.dataset.cat;
+      btns.forEach(function (o) { o.classList.toggle('is-active', o === b); });
+      apply();
+    });
+  });
+})();
+</script>`;
+  return shell({
+    title: `${SITE.name} — ${SITE.tagline || SITE.desc || '讨论'}`,
+    description: SITE.desc || SITE.tagline || '基于 GitHub Discussions 的静态论坛',
+    body,
+    script,
+  });
+}
+
+function renderThread(d) {
+  const comments = (d.comments?.nodes ?? [])
+    .slice()
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const body = `  <nav class="crumb"><a href="../../">← 全部话题</a></nav>
+  <article class="post">
+    <div class="thread__top">
+      <span class="chip">${d.category?.emoji ? esc(d.category.emoji) + ' ' : ''}${esc(d.category?.name || '讨论')}</span>
+      <span class="thread__num">#${d.number}</span>
+    </div>
+    <h1 class="post__title">${esc(d.title)}</h1>
+    <header class="post__head">
+      ${avatar(d.author, 40)}
+      <div class="post__who">
+        ${authorName(d.author)}
+        <time datetime="${esc(d.createdAt)}">${esc(fmtDate(d.createdAt))}</time>
+      </div>
+      <a class="post__src" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 查看</a>
+    </header>
+    <div class="md">${sanitize(d.bodyHTML)}</div>
+  </article>
+  <section class="replies">
+    <h2 class="replies__title">回复 <span>${comments.length}</span></h2>
+${comments
+  .map(
+    (c) => `    <article class="reply${c.isAnswer ? ' reply--answer' : ''}">
+      <header class="reply__head">
+        ${avatar(c.author, 34)}
+        <div class="post__who">
+          ${authorName(c.author)}
+          <time datetime="${esc(c.createdAt)}">${esc(fmtDate(c.createdAt))}</time>
+        </div>
+        ${c.isAnswer ? '<span class="badge">已采纳</span>' : ''}
+      </header>
+      <div class="md">${sanitize(c.bodyHTML)}</div>
+    </article>`,
+  )
+  .join('\n')}
+${comments.length === 0 ? '    <p class="replies__none">还没有人回复，你可以是第一个。</p>' : ''}
+  </section>
+  <section class="cta">
+    <a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">在 GitHub 上回复</a>
+    <p class="cta__hint">回复需要 GitHub 账号；你在 Discussions 里的发言稍后会自动同步到本页。</p>
+  </section>`;
+  return shell({
+    title: `${d.title} — ${SITE.name}`,
+    description: truncate(text(d.bodyHTML), 140),
+    body,
+    base: '../../',
+    pageClass: 'page-thread',
+  });
+}
+
+function render404() {
+  const body = `  <section class="empty">
+    <svg class="empty__art" viewBox="0 0 220 150" role="img" aria-label="页面不存在">
+      <ellipse cx="110" cy="132" rx="62" ry="7" fill="#ffffff" opacity=".04"/>
+      <circle cx="110" cy="66" r="42" fill="#101215" stroke="#24272c" stroke-dasharray="6 6"/>
+      <path d="M96 52c2-9 12-13 20-8 9 5 9 17 1 22-4 3-7 4-7 9" fill="none" stroke="#ffd83d" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="110" cy="88" r="3.4" fill="#ffd83d"/>
+    </svg>
+    <h1>这个页面好像走丢了</h1>
+    <p>链接可能拼错了，或者帖子已经被删掉。</p>
+    <a class="btn" href="/">回到论坛首页</a>
+  </section>`;
+  return shell({ title: `页面不存在 — ${SITE.name}`, description: '404', body });
+}
+
+/**
+ * 防止再犯：<a> 里嵌 <a> 会被 HTML 解析器截断，导致布局静默错位。
+ * 注意闭合标签在匹配结果里是 "/a>"（不含 "<"），所以要用首字符判断，
+ * 不能用 startsWith('</')——否则每个 </a> 都会被当成开标签。
+ */
+function assertNoNestedAnchors(html, label) {
+  const tag = /<a\b[^>]*>|\/a\s*>/g;
+  let open = 0;
+  let m;
+  while ((m = tag.exec(html)) !== null) {
+    if (m[0].charAt(0) === '/') {
+      open = Math.max(0, open - 1);
+    } else if (++open > 1) {
+      throw new Error(`${label}: 发现嵌套 <a>（会被 HTML 解析器截断，破坏布局）`);
+    }
+  }
+}
+
+const pages = [];
+
+function writePage(relPath, html, label) {
+  assertNoNestedAnchors(html, label || relPath);
+  const full = join(ROOT, relPath);
+  mkdirSync(dirname(full), { recursive: true });
+  writeFileSync(full, html);
+  pages.push(relPath);
+}
+
+// ────────────────────────────────────────── 主流程
+
+function loadSiteConfig() {
+  const p = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'data', 'site.json');
+  const defaults = {
+    name: 'zbgamelt 论坛',
+    tagline: '提问 · 反馈 · 闲聊',
+    desc: '关于 zbgamelt 的讨论：新版本反馈、问题求助、功能建议。',
+  };
+  if (!existsSync(p)) return defaults;
+  try {
+    return { ...defaults, ...JSON.parse(readFileSync(p, 'utf8')) };
+  } catch {
+    return defaults;
+  }
+}
+
+async function main() {
+  const { discussions, source } = await loadData();
+
+  // 清掉上次生成物（保留源目录）
+  rmSync(join(ROOT, 't'), { recursive: true, force: true });
+  rmSync(join(ROOT, 'index.html'), { force: true });
+  rmSync(join(ROOT, '404.html'), { force: true });
+
+  writePage('index.html', renderIndex(discussions), 'index.html');
+  for (const d of discussions) {
+    writePage(join('t', String(d.number), 'index.html'), renderThread(d), `讨论 #${d.number}`);
+  }
+  writePage('404.html', render404(), '404.html');
+  writeFileSync(join(ROOT, '.nojekyll'), '');
+  mkdirSync(join(ROOT, 'assets'), { recursive: true });
+
+  console.log(`✓ 生成 ${pages.length} 个页面（数据源：${source}）→ ${ROOT}`);
+  if (source === 'sample') console.log('  （样例数据，线上不会被用到）');
+}
+
+main().catch((err) => {
+  console.error('✗ 构建失败：', err.message);
+  process.exit(1);
+});

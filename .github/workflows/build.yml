@@ -1,0 +1,53 @@
+name: 重建静态论坛
+
+# 帖子在 GitHub Discussions 里；这里只负责把它渲染成静态页面。
+# GITHUB_TOKEN 的推送不会再次触发本 workflow，所以不会自己套自己。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'data/site.json'
+      - 'assets/**'
+      - '.github/workflows/build.yml'
+  discussion:
+  discussion_comment:
+  schedule:
+    - cron: '17 */2 * * *'   # 兜底：每 2 小时同步一次
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  discussions: read
+
+concurrency:
+  group: build-forum
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 生成静态页面
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/build.mjs
+
+      - name: 提交生成结果
+        run: |
+          git config user.name  "zbgamelt"
+          git config user.email "297119334+zbgamelt@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "内容没有变化，跳过提交"
+          else
+            git commit -m "chore(site): 同步 Discussions 内容"
+            git push
+          fi

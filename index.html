@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zbgamelt 论坛 — 提问 · 反馈 · 闲聊</title>
+<meta name="description" content="zbgamelt 的讨论区：版本反馈、问题求助、功能建议，都在这儿。">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="zbgamelt 论坛 — 提问 · 反馈 · 闲聊">
+<meta property="og:description" content="zbgamelt 的讨论区：版本反馈、问题求助、功能建议，都在这儿。">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%230b0c0e%22%2F%3E%3Cpath%20d%3D%22M8%2010.5h16v9a2%202%200%200%201-2%202h-8l-4.5%203.5V21.5H10a2%202%200%200%201-2-2z%22%20fill%3D%22%23ffd83d%22%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="">
+<a class="skip" href="#main">跳到内容</a>
+<header class="top">
+  <div class="wrap top__inner">
+    <a class="brand" href="./">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <strong>zbgamelt 论坛</strong>
+        <small>提问 · 反馈 · 闲聊</small>
+      </span>
+    </a>
+    <nav class="top__nav">
+      <a href="https://github.com/zbgamelt/zbgamelt.github.io/discussions" target="_blank" rel="noopener">GitHub 讨论区</a>
+    </nav>
+  </div>
+</header>
+<main id="main" class="wrap">
+  <section class="empty">
+    <svg class="empty__art" viewBox="0 0 220 150" role="img" aria-label="还没有帖子">
+      <ellipse cx="110" cy="132" rx="62" ry="7" fill="#ffffff" opacity=".04"/>
+      <rect x="34" y="30" width="112" height="66" rx="18" fill="#16191d" stroke="#2b2f36"/>
+      <path d="M56 96v18l20-18z" fill="#16191d" stroke="#2b2f36" stroke-linejoin="round"/>
+      <circle cx="70" cy="63" r="4.5" fill="#ffd83d"/>
+      <circle cx="90" cy="63" r="4.5" fill="#ffd83d" opacity=".55"/>
+      <circle cx="110" cy="63" r="4.5" fill="#ffd83d" opacity=".28"/>
+      <rect x="138" y="52" width="60" height="42" rx="14" fill="#101215" stroke="#24272c" stroke-dasharray="5 5"/>
+      <path d="M186 94v12l-14-12z" fill="#101215" stroke="#24272c" stroke-dasharray="5 5"/>
+    </svg>
+    <h1>这里还一张帖子都没有…</h1>
+    <p>论坛的帖子都住在 GitHub Discussions 里，第一贴要不你来开个头？</p>
+    <a class="btn" href="https://github.com/zbgamelt/zbgamelt.github.io/discussions/new" target="_blank" rel="noopener">去发第一帖</a>
+    <p class="empty__hint">需要 GitHub 账号 · 发完几分钟内会自动同步到这里</p>
+  </section>
+
+</main>
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <span>帖子托管在 GitHub Discussions · 本站为只读静态镜像</span>
+    <span>构建于 2026/09/20 11:53</span>
+  </div>
+</footer>
+<script>
+(function () {
+  var q = document.getElementById('q');
+  if (!q) return;
+  var items = Array.prototype.slice.call(document.querySelectorAll('.thread'));
+  var btns = Array.prototype.slice.call(document.querySelectorAll('.chip--btn'));
+  var noresult = document.getElementById('noresult');
+  var cat = '*';
+  function apply() {
+    var kw = q.value.trim().toLowerCase();
+    var shown = 0;
+    items.forEach(function (el) {
+      var okCat = cat === '*' || el.dataset.cat === cat;
+      var okKw = !kw || (el.dataset.search || '').toLowerCase().indexOf(kw) !== -1;
+      var ok = okCat && okKw;
+      el.hidden = !ok;
+      if (ok) shown++;
+    });
+    if (noresult) noresult.hidden = shown > 0;
+  }
+  q.addEventListener('input', apply);
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      cat = b.dataset.cat;
+      btns.forEach(function (o) { o.classList.toggle('is-active', o === b); });
+      apply();
+    });
+  });
+})();
+</script>
+</body>
+</html>

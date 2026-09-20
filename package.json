@@ -1,0 +1,11 @@
+{
+  "name": "zbgamelt.github.io",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GitHub Discussions 转静态论坛（零依赖）",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/build.mjs --sample && python3 -m http.server 8080"
+  }
+}
