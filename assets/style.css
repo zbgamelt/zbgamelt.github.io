@@ -263,6 +263,7 @@ main { padding: 46px 0 72px; }
 /* 只清掉上下的间距（吸顶栏要贴到顶部），左右留白必须留住 ——
    用 padding 简写会把 .wrap 的左右 22px 一起清零，内容就贴屏边被裁了。 */
 .page-search main { padding-top: 0; padding-bottom: 40px; }
+.page-compose main { padding-top: 14px; }   /* 没有顶栏了，留 14px 呼吸空间，别让「← 全部话题」贴着上沿 */
 .sbar {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 0; border-bottom: 1px solid var(--border);

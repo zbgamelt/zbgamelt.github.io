@@ -505,6 +505,7 @@ function renderCompose() {
       title: `发新帖 — ${SITE.name}`,
       description: '去 GitHub 发新帖',
       base,
+      bare: true,   // 发帖页不要全站顶栏（同帖子页）：返回走页内的「← 全部话题」
       body: `  <section class="empty">
     <h1>页内发帖还没接线</h1>
     <p>本站暂时只能跳到 GitHub 发帖。</p>
@@ -594,6 +595,7 @@ function renderCompose() {
     pageClass: 'page-compose',
     script,
     fab: false,
+    bare: true,   // 发帖页不要全站顶栏（同帖子页）
   });
 }
 
