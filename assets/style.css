@@ -78,7 +78,7 @@ a:hover { color: var(--accent); }
 /* ── 首屏 ───────────────────────────── */
 main { padding: 46px 0 72px; }
 /* 首页：排序导航直接跟在顶栏下方，不用留那么大的间距 */
-.page-index main { padding-top: 18px; }
+.page-index main { padding-top: 6px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
@@ -95,8 +95,8 @@ main { padding: 46px 0 72px; }
 /* ── 排序导航（顶栏下方）：最新 / 最早，选中项带下划条 ── */
 .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin: 0 0 6px; }
 .tab {
-  position: relative; padding: 9px 2px 13px;
-  background: none; border: none; font: inherit; font-size: 14.5px;
+  position: relative; padding: 6px 2px 9px;
+  background: none; border: none; font: inherit; font-size: 14.5px; line-height: 1.3;
   color: var(--muted); cursor: pointer; transition: color .15s ease;
 }
 .tab:hover { color: var(--text); }
@@ -275,12 +275,6 @@ main { padding: 46px 0 72px; }
 .sitem__user { color: #6b727c; font-size: 12.5px; }
 .sempty { padding: 34px 0; color: var(--muted); font-size: 14px; }
 
-/* 网页发布的署名标记 */
-.srcmark {
-  display: inline-block; margin-left: 5px; padding: 1px 6px;
-  border: 1px solid var(--border); border-radius: 999px;
-  font-size: 10.5px; color: #8b929c; vertical-align: 1px;
-}
 
 /* ── 发新帖页 ───────────────────────── */
 .compose { max-width: 680px; }

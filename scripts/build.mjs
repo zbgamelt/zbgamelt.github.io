@@ -248,7 +248,8 @@ function authorText(d) {
 function authorLabel(d, linked = true) {
   const nick = webAuthor(d);
   if (!nick) return authorName(d.author, linked);
-  return `<span class="author">${esc(nick)}</span><span class="srcmark" title="通过论坛页面发布">网页</span>`;
+  // 论坛网页发布：署名用填写的昵称（原先后面跟一个「网页」小标记，已按要求去掉）
+  return `<span class="author">${esc(nick)}</span>`;
 }
 
 /**
