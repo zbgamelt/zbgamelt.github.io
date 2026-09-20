@@ -251,26 +251,22 @@ function authorLabel(d, linked = true) {
   return `<span class="author">${esc(nick)}</span><span class="srcmark" title="通过论坛页面发布">网页</span>`;
 }
 
+/**
+ * 帖子卡片：无外框，紧贴排布。
+ * 第一行标题、第二行内容、第三行左边用户名 / 右边时间。
+ * 分类不再直接展示（筛选条已隐藏），但保留 data-cat 数据不删。
+ */
 function threadRow(d, base) {
   const cat = d.category?.name ?? '';
   const excerpt = truncate(text(d.bodyHTML), 96);
-  const replies = d.comments?.totalCount ?? 0;
-  return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}">
-      <div class="thread__body">
-        <div class="thread__top">
-          <span class="chip">${catEmoji(d.category?.emoji) ? esc(catEmoji(d.category.emoji)) + ' ' : ''}${esc(cat || '讨论')}</span>
-          <span class="thread__num">#${d.number}</span>
-        </div>
-        <h2 class="thread__title">${esc(d.title)}</h2>
-        ${excerpt ? `<p class="thread__excerpt">${esc(excerpt)}</p>` : ''}
-        <div class="thread__meta">
-          ${avatar(d.author, 22)}
-          ${authorLabel(d, false)}
-          <span class="dot">·</span>
-          <time datetime="${esc(d.updatedAt)}" title="${esc(fmtDate(d.updatedAt))}">${esc(fmtDate(d.updatedAt))}</time>
-        </div>
+  const ts = new Date(d.updatedAt).getTime();
+  return `    <a class="thread" href="${base}t/${d.number}/" data-cat="${esc(cat)}" data-ts="${ts}">
+      <h2 class="thread__title">${esc(d.title)}</h2>
+      ${excerpt ? `<p class="thread__excerpt">${esc(excerpt)}</p>` : ''}
+      <div class="thread__meta">
+        ${authorLabel(d, false)}
+        <time datetime="${esc(d.updatedAt)}" title="${esc(fmtDate(d.updatedAt))}">${esc(fmtDate(d.updatedAt))}</time>
       </div>
-      <div class="thread__count" aria-label="${replies} 条回复"><strong>${replies}</strong><span>回复</span></div>
     </a>`;
 }
 
@@ -298,20 +294,17 @@ function renderIndex(discussions) {
   const list = discussions
     .slice()
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  const cats = [...new Set(list.map((d) => d.category?.name).filter(Boolean))];
+  // 分类筛选条已隐藏（用户要求不显示），但分类数据仍在每张卡片的 data-cat 上，没有删。
   const body =
     list.length === 0
       ? emptyState()
-      : `  <section class="hero">
-    <div class="chips" role="group" aria-label="按板块筛选">
-      <button class="chip chip--btn is-active" data-cat="*">全部</button>
-${cats.map((c) => `      <button class="chip chip--btn" data-cat="${esc(c)}">${esc(c)}</button>`).join('\n')}
-    </div>
-  </section>
+      : `  <nav class="tabs" aria-label="排序">
+    <button class="tab is-active" type="button" data-sort="new" aria-pressed="true">最新</button>
+    <button class="tab" type="button" data-sort="old" aria-pressed="false">最早</button>
+  </nav>
   <section class="list" id="list">
 ${list.map((d) => threadRow(d, '')).join('\n')}
-  </section>
-  <p class="noresult" id="noresult" hidden>没有匹配的话题，换个词试试？</p>`;
+  </section>`;
   const script = `<script>
 (function () {
   // 相对时间（“3 天前”）在浏览器里算：静态 HTML 里存的是绝对时间，
@@ -335,24 +328,26 @@ ${list.map((d) => threadRow(d, '')).join('\n')}
     if (rel) el.textContent = rel;
   });
 
-  var items = Array.prototype.slice.call(document.querySelectorAll('.thread'));
-  var btns = Array.prototype.slice.call(document.querySelectorAll('.chip--btn'));
-  var noresult = document.getElementById('noresult');
-  var cat = '*';
-  function apply() {
-    var shown = 0;
-    items.forEach(function (el) {
-      var ok = cat === '*' || el.dataset.cat === cat;
-      el.hidden = !ok;
-      if (ok) shown++;
-    });
-    if (noresult) noresult.hidden = shown > 0;
-  }
-  btns.forEach(function (b) {
-    b.addEventListener('click', function () {
-      cat = b.dataset.cat;
-      btns.forEach(function (o) { o.classList.toggle('is-active', o === b); });
-      apply();
+  // 排序：按卡片上的 data-ts 重排 DOM，不刷新页面
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var list = document.getElementById('list');
+  if (!list) return;
+  var rows = Array.prototype.slice.call(list.children);
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (o) {
+        var on = o === t;
+        o.classList.toggle('is-active', on);
+        o.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      rows
+        .slice()
+        .sort(function (a, b) {
+          var x = +a.dataset.ts || 0;
+          var y = +b.dataset.ts || 0;
+          return t.dataset.sort === 'old' ? x - y : y - x;
+        })
+        .forEach(function (el) { list.appendChild(el); });
     });
   });
 })();
@@ -362,6 +357,7 @@ ${list.map((d) => threadRow(d, '')).join('\n')}
     description: SITE.desc || SITE.tagline || '基于 GitHub Discussions 的静态论坛',
     body,
     script,
+    pageClass: 'page-index',
   });
 }
 

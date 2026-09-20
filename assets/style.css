@@ -77,9 +77,8 @@ a:hover { color: var(--accent); }
 
 /* ── 首屏 ───────────────────────────── */
 main { padding: 46px 0 72px; }
-
-/* 首屏现在只剩分类筛选（标题、副标题、搜索框都已移走） */
-.hero { margin-bottom: 24px; }
+/* 首页：排序导航直接跟在顶栏下方，不用留那么大的间距 */
+.page-index main { padding-top: 18px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
@@ -93,45 +92,47 @@ main { padding: 46px 0 72px; }
 .chip--btn.is-active { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
 
 /* ── 帖子列表 ───────────────────────── */
-.list { display: flex; flex-direction: column; gap: 12px; }
-
-.thread {
-  display: flex; align-items: center; gap: 18px;
-  padding: 18px 20px;
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+/* ── 排序导航（顶栏下方）：最新 / 最早，选中项带下划条 ── */
+.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin: 0 0 6px; }
+.tab {
+  position: relative; padding: 9px 2px 13px;
+  background: none; border: none; font: inherit; font-size: 14.5px;
+  color: var(--muted); cursor: pointer; transition: color .15s ease;
 }
-.thread:hover { border-color: var(--border-strong); background: var(--card-2); color: inherit; }
-.thread__body { min-width: 0; flex: 1; }
+.tab:hover { color: var(--text); }
+.tab.is-active { color: var(--text-strong); font-weight: 600; }
+.tab.is-active::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; border-radius: 2px; background: var(--accent);
+}
+
+/* ── 帖子列表：无外框、紧贴排布，行与行之间只有分隔线 ── */
+.list { display: block; }
+
+.thread { display: block; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.thread:last-child { border-bottom: none; }
+.thread:hover { color: inherit; }
 .thread__top { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
 .thread__num { color: #5f666f; font-size: 12px; font-family: var(--mono); }
 .thread__title {
-  margin: 0 0 6px; font-size: 17px; line-height: 1.45; font-weight: 600;
+  margin: 0 0 7px; font-size: 17px; line-height: 1.45; font-weight: 600;
   color: var(--text-strong); letter-spacing: -.005em;
   overflow-wrap: anywhere;
 }
 .thread:hover .thread__title { color: var(--accent); }
 .thread__excerpt {
-  margin: 0 0 12px; color: var(--muted); font-size: 13.5px; line-height: 1.6;
+  margin: 0 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.6;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.thread__meta { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12.5px; }
+/* 第三行：左边用户名，右边时间 */
+.thread__meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12.5px; }
 .thread__meta .dot { opacity: .5; }
-.thread__meta time { color: var(--muted); }
-.thread__count {
-  flex: none; text-align: center; min-width: 58px;
-  padding: 10px 8px; border-radius: 12px;
-  background: #101215; border: 1px solid var(--border);
-}
-.thread__count strong { display: block; font-size: 17px; color: var(--text-strong); font-weight: 600; }
-.thread__count span { font-size: 11px; color: var(--muted); }
+.thread__meta time { color: #6b727c; }
 
 .avatar { border-radius: 50%; background: #24272c; object-fit: cover; width: var(--s, 40px); height: var(--s, 40px); flex: none; }
 .avatar--ghost { display: inline-block; background: linear-gradient(135deg, #24272c, #1a1d21); }
 .author { color: #c3c8d0; font-weight: 500; }
 .author:hover { color: var(--accent); }
-
-.noresult { color: var(--muted); text-align: center; padding: 40px 0; }
 
 /* ── 空状态 ─────────────────────────── */
 .empty { text-align: center; padding: 54px 20px 20px; }
@@ -220,8 +221,7 @@ main { padding: 46px 0 72px; }
 
 @media (max-width: 560px) {
   main { padding: 30px 0 56px; }
-  .thread { padding: 16px; gap: 12px; }
-  .thread__count { min-width: 48px; padding: 8px 6px; }
+  .thread { padding: 14px 0; }
   .post { padding: 20px 18px 6px; }
   .post__title { font-size: 20px; }
   .reply { padding: 16px; }
