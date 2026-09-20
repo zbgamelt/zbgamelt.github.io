@@ -352,3 +352,16 @@ main { padding: 46px 0 72px; }
   padding-left: 22px;
   padding-right: 22px;
 }
+
+/* 发帖页：登录状态条 / 未登录时的登录入口（都不做卡片，跟全站一致） */
+.gate { margin: 0 0 26px; }
+.gate p { margin: 0 0 16px; color: var(--muted); font-size: 13.5px; }
+.who { display: flex; align-items: center; gap: 10px; margin: 0 0 22px; font-size: 13.5px; color: var(--muted); }
+.who img { width: 26px; height: 26px; border-radius: 50%; display: block; }
+.who b { color: var(--text-strong); font-weight: 600; }
+.who__out {
+  margin-left: auto; background: none; border: 0; padding: 0;
+  color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.who__out:hover { color: var(--text); }

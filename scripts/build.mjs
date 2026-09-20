@@ -496,7 +496,7 @@ ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人�
  */
 function renderCompose() {
   const p = SITE.post;
-  const ready = Boolean(p?.api && p?.turnstileSitekey);
+  const ready = Boolean(p?.api);
   // 这个页面在 /post/ 下，相对深度和 /t/<编号>/ 不同：
   // 少写一个 base 就会去 /post/assets/style.css 找样式（不存在）→ 页面裸奔。
   const base = '../';
@@ -518,12 +518,17 @@ function renderCompose() {
     <div class="tbar__label">发布帖子</div>
   </header>
   <section class="compose">
-    <p class="compose__sub">不用注册 GitHub 账号。发完几分钟内就会出现在首页。</p>
-    <form id="postform" class="form" novalidate>
-      <label class="field">
-        <span class="field__label">昵称 <i>选填</i></span>
-        <input id="nick" name="nickname" type="text" maxlength="24" placeholder="不填就署名「匿名访客」" autocomplete="nickname">
-      </label>
+    <p class="compose__sub">发帖要先用 GitHub 账号登录（跟评论区一样）。发布后几分钟内就会出现在首页。</p>
+    <div class="gate" id="gate">
+      <p>发帖要先用 GitHub 账号登录 —— 登录后回来这页就能写了。</p>
+      <a class="btn" id="login">用 GitHub 登录</a>
+    </div>
+    <div class="who" id="who" hidden>
+      <img id="who__av" alt="" width="26" height="26">
+      <span>已登录为 <b id="who__name"></b></span>
+      <button class="who__out" id="who__out" type="button">退出</button>
+    </div>
+    <form id="postform" class="form" novalidate hidden>
       <label class="field">
         <span class="field__label">标题</span>
         <input id="title" name="title" type="text" maxlength="120" placeholder="一句话说清楚你要问什么">
@@ -532,7 +537,6 @@ function renderCompose() {
         <span class="field__label">正文</span>
         <textarea id="body" name="body" rows="10" placeholder="支持 Markdown。写得越具体，越容易被答上。"></textarea>
       </label>
-      <div class="cf-turnstile" data-sitekey="${esc(p.turnstileSitekey)}" data-theme="dark" data-language="zh-cn"></div>
       <div class="form__foot">
         <button class="btn" id="submit" type="submit">发布</button>
         <span class="form__note" id="note" role="status" aria-live="polite"></span>
@@ -542,56 +546,94 @@ function renderCompose() {
       <h2>发出去了 ✅</h2>
       <p id="done__text"></p>
       <p class="done__links">
-        <a class="btn" id="done__gh" target="_blank" rel="noopener">在 GitHub 上查看</a>
         <a class="btn btn--ghost" href="../">回论坛首页</a>
       </p>
       <p class="empty__hint">首页要等站点完成重建才会出现这条（通常几分钟）。</p>
     </div>
   </section>`;
-  const script = `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script>
+  const script = `<script>
 (function () {
+  var API = ${JSON.stringify(p.api)};
+  var KEY = 'zbforum_sess';
+  var S = '';
+  try { S = localStorage.getItem(KEY) || ''; } catch (e) { S = ''; }
+
+  // 登录回调把会话号放在 URL 片段里带回来；片段不发给服务器、也不进 Referer
+  if (location.hash.indexOf('#s=') === 0) {
+    S = location.hash.slice(3);
+    try { localStorage.setItem(KEY, S); } catch (e) {}
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  var gate = document.getElementById('gate');
+  var who = document.getElementById('who');
   var form = document.getElementById('postform');
-  if (!form) return;
   var note = document.getElementById('note');
   var btn = document.getElementById('submit');
   function setNote(t) { if (note) note.textContent = t; }
+  function forget() { try { localStorage.removeItem(KEY); } catch (e) {} S = ''; }
+  function showGuest() { gate.hidden = false; who.hidden = true; form.hidden = true; }
+  function showUser(login, avatar) {
+    gate.hidden = true; who.hidden = false; form.hidden = false;
+    document.getElementById('who__name').textContent = '@' + login;
+    var av = document.getElementById('who__av');
+    if (avatar) { av.src = avatar; } else { av.hidden = true; }
+  }
+
+  if (S) {
+    fetch(API + '/api/me', { headers: { Authorization: 'Bearer ' + S } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && d.login) { showUser(d.login, d.avatar); }
+        else { forget(); showGuest(); }
+      })
+      .catch(function () { showGuest(); });
+  } else {
+    showGuest();
+  }
+
+  document.getElementById('login').addEventListener('click', function () {
+    var back = location.origin + location.pathname;
+    location.href = API + '/auth/login?return=' + encodeURIComponent(back);
+  });
+
+  document.getElementById('who__out').addEventListener('click', function () {
+    fetch(API + '/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + S } })
+      .then(function () { forget(); location.reload(); });
+  });
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var title = document.getElementById('title').value.trim();
     var body = document.getElementById('body').value.trim();
-    var nick = document.getElementById('nick').value.trim();
-    var ts = form.querySelector('[name="cf-turnstile-response"]');
     if (title.length < 4) return setNote('标题至少 4 个字');
     if (body.length < 8) return setNote('正文再写长一点点');
-    if (!ts || !ts.value) return setNote('人机验证还没完成，稍等一下再点发布');
     btn.disabled = true;
     setNote('正在发布…');
-    fetch(${JSON.stringify(p.api)}, {
+    fetch(API + '/new-post', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname: nick, title: title, body: body, turnstileToken: ts.value })
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S },
+      body: JSON.stringify({ title: title, body: body })
     })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
-        if (!res.ok || !res.d || !res.d.ok) throw new Error((res.d && res.d.error) || '发布失败');
+        if (!res.ok || !res.d || !res.d.ok) {
+          if (res.d && /登录/.test(res.d.error || '')) { forget(); showGuest(); }
+          throw new Error((res.d && res.d.error) || '发布失败');
+        }
         document.getElementById('done__text').textContent = '《' + title + '》已经建好了。';
-        document.getElementById('done__gh').href = res.d.url;
-        form.hidden = true;
+        form.hidden = true; who.hidden = true;
         document.getElementById('done').hidden = false;
         window.scrollTo({ top: 0, behavior: 'smooth' });
       })
-      .catch(function (err) {
-        setNote(err.message || '发布失败，稍后再试');
-        if (window.turnstile) window.turnstile.reset();
-      })
+      .catch(function (err) { setNote(err.message || '发布失败，稍后再试'); })
       .then(function () { btn.disabled = false; });
   });
 })();
 </script>`;
   return shell({
     title: `发新帖 — ${SITE.name}`,
-    description: '在本站发一条新帖，不用注册 GitHub 账号',
+    description: '用 GitHub 账号登录后在本站发新帖',
     body,
     base,
     pageClass: 'page-compose',
