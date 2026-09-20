@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>搜索 — 主播模拟器mod</title>
+<meta name="description" content="搜索论坛里的帖子">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="搜索 — 主播模拟器mod">
+<meta property="og:description" content="搜索论坛里的帖子">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%230b0c0e%22%2F%3E%3Cpath%20d%3D%22M8%2010.5h16v9a2%202%200%200%201-2%202h-8l-4.5%203.5V21.5H10a2%202%200%200%201-2-2z%22%20fill%3D%22%23ffd83d%22%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body class="page-search">
+<a class="skip" href="#main">跳到内容</a>
+<main id="main" class="wrap">
+  <div class="sbar">
+    <a class="sbar__back" href="../" id="sback" aria-label="返回" title="返回"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7.78 2.22 2 8l5.78 5.78 1.06-1.06L4.62 8.5H14v-1.5H4.62l4.22-4.22z"/></svg></a>
+    <input id="sq" class="sbar__input" type="search" placeholder="搜索帖子…" autocomplete="off" aria-label="搜索帖子">
+    <button id="sgo" class="sbar__go" type="button" aria-label="搜索" title="搜索"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg></button>
+  </div>
+  <p class="scount" id="scount">帖子 0</p>
+  <div class="slist" id="slist"></div>
+  <p class="sempty" id="sempty" hidden>没有匹配的帖子，换个词试试？</p>
+</main>
+<script>
+(function () {
+  var POSTS = [{"n":3,"t":"1111111111","x":"111111111","s":"111111111","u":"11111111111"},{"n":1,"t":"Welcome to zbgamelt.github.io Discussions!","x":"👋 Welcome! We’re using Discussions as a place to connect with other members of our community. We hope that…","s":"👋 welcome! we’re using discussions as a place to connect with other members of our community. we hope that you: ask questions you’re wondering about. share ideas. engage with other community members. welcome others and are open-minded. remember that this is a community we build together 💪. to get started, comment below with an introduction of yourself and tell us about what you do with this community.","u":"zbgamelt"}];
+  var q = document.getElementById('sq');
+  var list = document.getElementById('slist');
+  var count = document.getElementById('scount');
+  var empty = document.getElementById('sempty');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function render() {
+    var terms = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    var hit = POSTS.filter(function (p) {
+      if (!terms.length) return true;
+      var hay = (p.t + ' ' + p.x + ' ' + p.s + ' ' + p.u).toLowerCase();
+      return terms.every(function (t) { return hay.indexOf(t) !== -1; });
+    });
+    count.textContent = '帖子 ' + hit.length;
+    empty.hidden = hit.length > 0;
+    list.innerHTML = hit
+      .map(function (p) {
+        return (
+          '<a class="sitem" href="../t/' + p.n + '/">' +
+          '<h2 class="sitem__title">' + esc(p.t) + '</h2>' +
+          (p.x ? '<p class="sitem__excerpt">' + esc(p.x) + '</p>' : '') +
+          '<div class="sitem__user">' + esc(p.u) + '</div>' +
+          '</a>'
+        );
+      })
+      .join('');
+  }
+
+  q.addEventListener('input', render);
+  q.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); q.blur(); }
+  });
+  document.getElementById('sgo').addEventListener('click', function () { render(); q.focus(); });
+  // 从站内点进来的才走浏览器返回；直接打开这个地址的就回首页
+  document.getElementById('sback').addEventListener('click', function (e) {
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+        e.preventDefault();
+        history.back();
+      }
+    } catch (err) {}
+  });
+  render();
+  q.focus();
+})();
+</script>
+</body>
+</html>

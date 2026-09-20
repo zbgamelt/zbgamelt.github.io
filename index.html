@@ -17,25 +17,19 @@
 <header class="top">
   <div class="wrap top__inner">
     <a class="brand" href="./">主播模拟器mod</a>
+    <a class="iconbtn" href="search/" aria-label="搜索帖子" title="搜索"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg></a>
   </div>
 </header>
 <main id="main" class="wrap">
   <section class="hero">
-    <p class="hero__cta"><a class="btn" href="post/">发新帖</a><span class="hero__note">不用注册，填完就能发</span></p>
-    <div class="tools">
-      <label class="search">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>
-        <input id="q" type="search" placeholder="搜索标题 / 作者 / 内容…" autocomplete="off" aria-label="搜索话题">
-      </label>
-      <div class="chips" role="group" aria-label="按板块筛选">
-        <button class="chip chip--btn is-active" data-cat="*">全部</button>
-        <button class="chip chip--btn" data-cat="General">General</button>
-        <button class="chip chip--btn" data-cat="Announcements">Announcements</button>
-      </div>
+    <div class="chips" role="group" aria-label="按板块筛选">
+      <button class="chip chip--btn is-active" data-cat="*">全部</button>
+      <button class="chip chip--btn" data-cat="General">General</button>
+      <button class="chip chip--btn" data-cat="Announcements">Announcements</button>
     </div>
   </section>
   <section class="list" id="list">
-    <a class="thread" href="t/3/" data-cat="General" data-search="1111111111 General 11111111111 zbgamelt 111111111 由 11111111111 通过论坛页面发布 · 2026-09-20 07:32 UTC">
+    <a class="thread" href="t/3/" data-cat="General">
       <div class="thread__body">
         <div class="thread__top">
           <span class="chip">💬 General</span>
@@ -52,7 +46,7 @@
       </div>
       <div class="thread__count" aria-label="0 条回复"><strong>0</strong><span>回复</span></div>
     </a>
-    <a class="thread" href="t/1/" data-cat="Announcements" data-search="Welcome to zbgamelt.github.io Discussions! Announcements  zbgamelt 👋 Welcome! We’re using Discussions as a place to connect with other members of our community.…">
+    <a class="thread" href="t/1/" data-cat="Announcements">
       <div class="thread__body">
         <div class="thread__top">
           <span class="chip">📣 Announcements</span>
@@ -72,6 +66,7 @@
   </section>
   <p class="noresult" id="noresult" hidden>没有匹配的话题，换个词试试？</p>
 </main>
+<a class="fab" href="post/" aria-label="发新帖" title="发新帖"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8.75 2.5v4.75H13.5v1.5H8.75v4.75h-1.5V8.75H2.5v-1.5h4.75V2.5z"/></svg></a>
 <script>
 (function () {
   // 相对时间（“3 天前”）在浏览器里算：静态 HTML 里存的是绝对时间，
@@ -95,25 +90,19 @@
     if (rel) el.textContent = rel;
   });
 
-  var q = document.getElementById('q');
-  if (!q) return;
   var items = Array.prototype.slice.call(document.querySelectorAll('.thread'));
   var btns = Array.prototype.slice.call(document.querySelectorAll('.chip--btn'));
   var noresult = document.getElementById('noresult');
   var cat = '*';
   function apply() {
-    var kw = q.value.trim().toLowerCase();
     var shown = 0;
     items.forEach(function (el) {
-      var okCat = cat === '*' || el.dataset.cat === cat;
-      var okKw = !kw || (el.dataset.search || '').toLowerCase().indexOf(kw) !== -1;
-      var ok = okCat && okKw;
+      var ok = cat === '*' || el.dataset.cat === cat;
       el.hidden = !ok;
       if (ok) shown++;
     });
     if (noresult) noresult.hidden = shown > 0;
   }
-  q.addEventListener('input', apply);
   btns.forEach(function (b) {
     b.addEventListener('click', function () {
       cat = b.dataset.cat;
