@@ -170,6 +170,11 @@ main { padding: 46px 0 72px; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* 帖子页不要全站顶栏（主播模拟器mod + 搜索）：标题栏自己就是顶栏 */
+.page-thread .top { display: none; }
+.page-thread main { padding-top: 0; }
+.page-thread .tbar { top: 0; }
+
 /* 正文：无外框、紧贴 */
 .post { padding: 0 0 20px; border-bottom: 1px solid var(--border); }
 .post__meta { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; color: var(--muted); font-size: 12.5px; }
