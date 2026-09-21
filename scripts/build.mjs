@@ -2,8 +2,16 @@
 /**
  * GitHub Discussions → 静态论坛（零依赖）
  *
- *   node scripts/build.mjs            有 GITHUB_TOKEN 时拉真实 Discussions，否则回退缓存/样例
+ *   node scripts/build.mjs            有 GITHUB_TOKEN 时拉真实 Discussions；
+ *                                    拉不到就**报错退出**（绝不退回缓存/样例，
+ *                                    更不会把「拉取失败」当成「空论坛」覆盖线上）
  *   node scripts/build.mjs --sample   强制使用预览样例数据（本地看设计用）
+ *   node scripts/build.mjs --empty    显式生成空状态页（真的空论坛才用）
+ *
+ * 关键约束：只要 token 在，数据就必须来自 GitHub 且可信；任何异常一律非 0 退出。
+ * 空状态页只有两条出口：明确判定「仓库没开 Discussions」，或显式 --empty。
+ * （历史事故：token 失效的报错文案里含 "discussions"，被当成「没开 Discussions」，
+ *   静默渲染空页，紧接着 build.yml 的 git add -A 就把整个论坛清空推上 main。）
  *
  * 产物直接落在仓库根目录（index.html / t/<编号>/index.html / 404.html），
  * 因为 zbgamelt.github.io 是「用户站点」仓库，Pages 从 main 分支根目录发布。
@@ -28,6 +36,72 @@ const TZ = 'Asia/Shanghai';
 
 // ────────────────────────────────────────── 数据
 
+/**
+ * 构建期致命错误。用 code 区分「可预期的非故障」和「真故障」，调用方只看 code，
+ * 绝不去正则匹配错误文案：
+ * 旧代码用 /discussion/i 判「仓库没开 Discussions」，而 token 失效时报的
+ * 「拿不到 discussions（仓库可能还没开启 Discussions）」也含这个词 —— 于是
+ * 一次失效的 token 就把线上论坛静默清空了。别再回到文案匹配。
+ */
+class BuildError extends Error {
+  constructor(message, code) {
+    super(message);
+    this.name = 'BuildError';
+    this.code = code;
+  }
+}
+
+const GH_HEADERS = {
+  authorization: `bearer ${token}`,
+  'content-type': 'application/json',
+  accept: 'application/vnd.github+json',
+  'user-agent': 'zbgamelt-forum-builder',
+};
+
+/**
+ * 统一 HTTP 调用：网络故障 / 非 2xx / 非 JSON 一律抛 BuildError，绝不吞。
+ * 401=token 无效或过期，403=权限不足或限流，404=这个 token 看不到该仓库。
+ */
+async function ghFetch(url, init, what) {
+  let res;
+  try {
+    res = await fetch(url, init);
+  } catch (err) {
+    throw new BuildError(`${what}：网络请求失败（${err.message}）`, 'NETWORK');
+  }
+  const raw = await res.text();
+  let json = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    throw new BuildError(`${what}：HTTP ${res.status}，返回的不是 JSON（${raw.slice(0, 200)}）`, 'BAD_RESPONSE');
+  }
+  if (!res.ok) {
+    throw new BuildError(
+      `${what}：HTTP ${res.status} ${json.message || ''}`.trim() +
+        '（token 可能无效、过期或权限不足；这一步失败绝不能当成「论坛是空的」）',
+      'HTTP',
+    );
+  }
+  return json;
+}
+
+/**
+ * 仓库到底有没有开 Discussions —— 只认 REST 的 has_discussions 这个明确信号。
+ * 拿不到这个信号（网络/token 问题）就抛错，绝不假设成「没开」。
+ */
+async function discussionsEnabled() {
+  const json = await ghFetch(
+    `https://api.github.com/repos/${OWNER}/${NAME}`,
+    { headers: GH_HEADERS },
+    '查询仓库信息',
+  );
+  if (typeof json.has_discussions !== 'boolean') {
+    throw new BuildError('查询仓库信息：响应里没有 has_discussions 字段，无法判断 Discussions 状态', 'BAD_RESPONSE');
+  }
+  return json.has_discussions;
+}
+
 async function fetchDiscussions() {
   const query = `query($owner:String!, $name:String!, $cursor:String) {
     repository(owner:$owner, name:$name) {
@@ -49,19 +123,20 @@ async function fetchDiscussions() {
   const all = [];
   let cursor = null;
   for (let page = 0; page < 10; page++) {
-    const res = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        authorization: `bearer ${token}`,
-        'content-type': 'application/json',
-        'user-agent': 'zbgamelt-forum-builder',
+    const json = await ghFetch(
+      'https://api.github.com/graphql',
+      {
+        method: 'POST',
+        headers: GH_HEADERS,
+        body: JSON.stringify({ query, variables: { owner: OWNER, name: NAME, cursor } }),
       },
-      body: JSON.stringify({ query, variables: { owner: OWNER, name: NAME, cursor } }),
-    });
-    const json = await res.json();
-    if (json.errors) throw new Error(`GraphQL: ${JSON.stringify(json.errors)}`);
+      '拉取 Discussions',
+    );
+    if (json.errors) {
+      throw new BuildError(`拉取 Discussions 失败（GraphQL 报错）：${JSON.stringify(json.errors)}`, 'GRAPHQL');
+    }
     const d = json.data?.repository?.discussions;
-    if (!d) throw new Error('拿不到 discussions（仓库可能还没开启 Discussions）');
+    if (!d) throw new BuildError('拉取 Discussions 失败：GraphQL 响应里没有 repository.discussions', 'GRAPHQL');
     all.push(...d.nodes);
     if (!d.pageInfo.hasNextPage) break;
     cursor = d.pageInfo.endCursor;
@@ -72,29 +147,43 @@ async function fetchDiscussions() {
 async function loadData() {
   const cachePath = join(ROOT, 'data', 'discussions.json');
   const samplePath = join(ROOT, 'data', 'sample-discussions.json');
+  const inCI = Boolean(process.env.GITHUB_ACTIONS || process.env.CI);
 
   if (forceEmpty) {
     console.log('! 按 --empty 构建：只输出空状态页（不发布任何内容）');
     return { discussions: [], source: 'empty' };
   }
+
   if (!forceSample && token) {
-    let nodes;
-    try {
-      nodes = await fetchDiscussions();
-    } catch (err) {
-      // 仓库刚建好、Discussions 还没开的时候，这里会报错；
-      // 那不是构建故障，先发个空状态页，等开了再自动填内容。
-      if (/discussion/i.test(err.message)) {
-        console.log(`! ${err.message}`);
-        console.log('! 先渲染空状态页（Discussions 一开，下次构建就会自动填充）');
-        return { discussions: [], source: 'empty' };
-      }
-      throw err;
+    // 有 token 就只认真实数据：拉不到就报错退出，不许退回缓存/样例，
+    // 更不许把「拉取失败」当成「论坛是空的」——线上紧接着就是 git add -A。
+    if (!(await discussionsEnabled())) {
+      console.log('! 这个仓库没有开启 Discussions（REST has_discussions=false）');
+      console.log('! 这是仓库设置、不是 token/网络问题：先渲染空状态页，等 Discussions 一开下次构建自动填充');
+      return { discussions: [], source: 'empty' };
+    }
+    const nodes = await fetchDiscussions();
+    if (nodes.length === 0) {
+      // 仓库开了 Discussions、token 也有效，却一条都拿不到：宁可让构建红，
+      // 也不要拿空论坛去覆盖线上。确实空论坛就显式跑 --empty。
+      throw new BuildError(
+        'Discussions 已开启、token 也有效，但一个讨论都没拉到 —— 拒绝用空论坛覆盖线上',
+        'EMPTY_RESULT',
+      );
     }
     writeFileSync(cachePath, JSON.stringify({ discussions: nodes }, null, 2), 'utf8');
     console.log(`✓ 从 GitHub 拉取 ${nodes.length} 个讨论（${new Date().toISOString()}）`);
     return { discussions: nodes, source: 'github' };
   }
+
+  if (inCI && !forceSample) {
+    // CI 里没有 token 就是配置坏了：缓存/样例都不是真实内容，不能拿去覆盖线上。
+    throw new BuildError(
+      `CI 环境里没有 GITHUB_TOKEN（${REPO_FULL}），拒绝用缓存/样例数据构建`,
+      'NO_TOKEN_IN_CI',
+    );
+  }
+
   if (!forceSample && existsSync(cachePath)) {
     const cached = JSON.parse(readFileSync(cachePath, 'utf8'));
     console.log(`✓ 用缓存数据（${cached.discussions.length} 个讨论）`);
