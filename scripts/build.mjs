@@ -242,8 +242,50 @@ const FAVICON =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0b0c0e"/><path d="M8 10.5h16v9a2 2 0 0 1-2 2h-8l-4.5 3.5V21.5H10a2 2 0 0 1-2-2z" fill="#ffd83d"/></svg>`,
   );
 
-const ICON_SEARCH =
-  '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>';
+/**
+ * PWA（装到手机桌面）的配置。名称等从 data/site.json 的 pwa 块读，改名字不用碰代码；
+ * 图标是静态文件（scripts/make-icons.py 生成），这里只生成清单。
+ */
+const PWA = {
+  name: SITE.pwa?.name || SITE.name,
+  shortName: SITE.pwa?.shortName || SITE.name,
+  desc: SITE.pwa?.desc || SITE.desc || SITE.tagline || '',
+  themeColor: SITE.pwa?.themeColor || '#0b0c0e',
+  backgroundColor: SITE.pwa?.backgroundColor || '#0b0c0e',
+};
+
+function renderManifest() {
+  return (
+    JSON.stringify(
+      {
+        name: PWA.name,
+        short_name: PWA.shortName,
+        description: PWA.desc,
+        lang: 'zh-CN',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        background_color: PWA.backgroundColor,
+        theme_color: PWA.themeColor,
+        icons: [
+          { src: '/assets/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/assets/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          // maskable 单独一份：满幅无圆角，标记收在安全区里，各家桌面的异形遮罩都切不到
+          { src: '/assets/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+        shortcuts: [
+          { name: '论坛', url: '/' },
+          { name: '博客', url: '/zbgamelttwo/' },
+          { name: '我的', url: '/me/' },
+        ],
+      },
+      null,
+      2,
+    ) + '\n'
+  );
+}
+
+const ICON_SEARCH =  '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg>';
 const ICON_BACK =
   '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7.78 2.22 2 8l5.78 5.78 1.06-1.06L4.62 8.5H14v-1.5H4.62l4.22-4.22z"/></svg>';
 const ICON_PLUS =
@@ -292,6 +334,13 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:type" content="website">
 <link rel="icon" href="${FAVICON}">
+<link rel="manifest" href="${base}manifest.webmanifest">
+<link rel="apple-touch-icon" href="${base}assets/icons/apple-touch-icon.png">
+<meta name="theme-color" content="${esc(PWA.themeColor)}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="${esc(PWA.shortName)}">
 <link rel="stylesheet" href="${base}assets/style.css">
 </head>
 <body class="${pageClass}${nav ? ' has-nav' : ''}">
@@ -299,10 +348,18 @@ function shell({ title, description, body, base = '', pageClass = '', script = '
 ${header}<main id="main" class="wrap">
 ${body}
 </main>
-${fabBtn}${navBar}${script}
+${fabBtn}${navBar}${swRegister(base)}${script}
 </body>
 </html>
 `;
+}
+
+/**
+ * 注册 Service Worker（sw.js 在站点根，作用域就是整个站点，论坛和博客都盖到）。
+ * 只用它来「能装到桌面」+ 断网兜底，拿不到也不影响页面本身，所以失败静默。
+ */
+function swRegister(base) {
+  return `<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('${base}sw.js').catch(function(){})})}</script>`;
 }
 
 function avatar(a, size = 40) {
@@ -875,6 +932,12 @@ function renderMe() {
       </a>
       <p class="me__foot"><button class="me__out" id="out" type="button">退出登录</button></p>
     </div>
+    <div class="me__extra">
+      <button class="me__row me__row--btn" id="me__install" type="button" hidden>
+        <span>安装到手机桌面</span>
+        <span class="me__chev" aria-hidden="true">›</span>
+      </button>
+    </div>
   </section>`;
   const script = `<script>
 (function () {
@@ -892,6 +955,30 @@ function renderMe() {
   var mebody = document.getElementById('mebody');
   function forget() { try { localStorage.removeItem(KEY); } catch (e) {} S = ''; }
   function guest() { gate.hidden = false; mebody.hidden = true; }
+
+  // 「安装到手机桌面」：Android/Chrome 会发 beforeinstallprompt，抓住就能一键装；
+  // iOS 没这套 API，只能把菜单路径告诉人。已经装好的（standalone）不显示入口。
+  var installBtn = document.getElementById('me__install');
+  var bip = null;
+  var installed = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) ||
+    window.navigator.standalone === true;
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (installBtn && !installed && isIOS) installBtn.hidden = false;
+  addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    bip = e;
+    if (installBtn && !installed) installBtn.hidden = false;
+  });
+  if (installBtn) {
+    installBtn.addEventListener('click', function () {
+      if (!bip) {
+        alert('在 iPhone 上：点底部的「分享」按钮 → 选「添加到主屏幕」。');
+        return;
+      }
+      bip.prompt();
+      bip.userChoice.then(function () { bip = null; installBtn.hidden = true; });
+    });
+  }
   function show(d) {
     gate.hidden = true;
     mebody.hidden = false;
@@ -1616,6 +1703,8 @@ async function main() {
   writePage(join('login', 'index.html'), renderLogin(), 'login/index.html');
   writePage(join('register', 'index.html'), renderRegister(), 'register/index.html');
   writePage(join('admin', 'index.html'), renderAdmin(), 'admin/index.html');
+  // PWA 清单（图标是静态文件，这里只写清单）。放在根，作用域盖整个站点。
+  writeFileSync(join(ROOT, 'manifest.webmanifest'), renderManifest());
   writeFileSync(join(ROOT, '.nojekyll'), '');
   mkdirSync(join(ROOT, 'assets'), { recursive: true });
 

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>断网了 — ZBGAME LT</title>
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%230b0c0e%22%2F%3E%3Cpath%20d%3D%22M8%2010.5h16v9a2%202%200%200%201-2%202h-8l-4.5%203.5V21.5H10a2%202%200%200%201-2-2z%22%20fill%3D%22%23ffd83d%22%2F%3E%3C%2Fsvg%3E">
+<style>
+  /* 离线兜底页：故意自带全部样式，不依赖 style.css 有没有被缓存住 */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: #0b0c0e;
+    color: #e7e9ec;
+    font: 15px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 340px; text-align: center; }
+  .art { margin: 0 auto 26px; display: block; }
+  h1 { margin: 0 0 10px; font-size: 20px; font-weight: 700; letter-spacing: .3px; }
+  p { margin: 0 0 26px; color: #8b929c; font-size: 14.5px; }
+  .btn {
+    display: inline-block; min-width: 168px;
+    padding: 12px 26px; border: 0; border-radius: 999px;
+    background: #ffd83d; color: #1a1503;
+    font: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer; text-decoration: none;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:active { transform: scale(.97); }
+  .hint { margin: 22px 0 0; font-size: 12.5px; color: #5d646d; }
+</style>
+</head>
+<body>
+<main>
+  <!-- 睡着的对话气泡：跟站点图标同一套线条语言 -->
+  <svg class="art" width="132" height="112" viewBox="0 0 132 112" fill="none" aria-hidden="true">
+    <rect x="12" y="14" width="108" height="66" rx="18"
+          stroke="#2e3238" stroke-width="2.5" fill="#141619"/>
+    <path d="M40 80v14l17-14" fill="#141619" stroke="#2e3238" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="48" cy="47" r="4" fill="#ffd83d" opacity=".85"/>
+    <circle cx="66" cy="47" r="4" fill="#8b929c" opacity=".5"/>
+    <circle cx="84" cy="47" r="4" fill="#8b929c" opacity=".28"/>
+    <path d="M92 28h10l-10 10h10" stroke="#2e3238" stroke-width="2.6"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M105 21h7l-7 7h7" stroke="#2e3238" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".7"/>
+  </svg>
+  <h1>网络好像掉线了…</h1>
+  <p>连上网络再点一下就好，帖子和评论都还在。</p>
+  <button class="btn" id="go" type="button">重新加载</button>
+  <p class="hint" id="hint" hidden>还是连不上 —— 等会儿再试试？</p>
+</main>
+<script>
+  (function () {
+    var n = 0;
+    document.getElementById('go').addEventListener('click', function () {
+      n++;
+      if (n >= 2) document.getElementById('hint').hidden = false;
+      location.reload();
+    });
+    // 网一回来就自动回首页，省得人干等
+    addEventListener('online', function () { location.replace('/'); });
+  })();
+</script>
+</body>
+</html>

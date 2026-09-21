@@ -10,12 +10,18 @@
 
 ```
 scripts/build.mjs          # 生成器（零依赖，只用了 Node 内置能力）
+scripts/make-icons.py      # 生成手机桌面图标（Pillow），改完重跑一次
 assets/style.css           # 站点样式（深色）
-data/site.json             # 站点名 / 标语 / 简介
+assets/zsocial.js          # 站内账号 + 评论的前端客户端（论坛/博客共用）
+assets/icons/              # PWA 图标（生成物，别手改）
+data/site.json             # 站点名 / 标语 / 简介 / PWA 名字
+worker/forum-api.js        # Cloudflare Worker：登录注册、评论、管理（部署见 worker/）
+hugo-src/                  # 博客子站（Hugo + PaperMod），产物在 zbgamelttwo/
 data/discussions.json      # 最近一次抓取的内容缓存（由 workflow 生成）
 data/sample-discussions.json  # 本地预览用样例，线上不会用到
 .github/workflows/build.yml   # 有新帖/有回复时自动重建并提交
 index.html  t/<编号>/  404.html   # ← 生成物，不要手改
+sw.js  manifest.webmanifest  offline.html   # PWA（manifest 是生成物，另两个是手写的）
 ```
 
 ## 本地看效果
@@ -54,8 +60,29 @@ python3 -m http.server 8080
 不丢，作为构建期快照折在帖子页的「旧的 GitHub 回复」`<details>` 里备查 —— 它**不再更新**，
 不要再把 `data/site.json` 的 `giscus` 当成生效配置（现在没有任何代码读它，属于遗留字段）。
 
+## 手机端（PWA）
+
+站点能当 App 装到手机桌面：`display: standalone`，点开没有浏览器地址栏。
+
+- `manifest.webmanifest` —— 由 `data/site.json` 的 `pwa` 块生成（改名字改那份 JSON 就行，
+  **不要手改 manifest**，下次构建会覆盖）。作用域是整个源，论坛和博客共用一个 App。
+- `sw.js` —— Service Worker。只干两件事：满足「可安装」要求 + 断网时给兜底页。
+  策略刻意保守：导航 network-first（宁可慢也别给旧页面），同源静态资源
+  stale-while-revalidate，**跨域的接口一律不碰**。改策略记得改里面的 `CACHE` 版本号。
+- `offline.html` —— 断网兜底页，样式全内联，不依赖 style.css 有没有被缓存住。
+- `assets/icons/` —— 图标（192 / 512 / maskable / apple-touch）。
+  改图标就改 `scripts/make-icons.py` 然后 `python3 scripts/make-icons.py`；
+  图形跟 favicon（build.mjs 里的 `FAVICON`）是同一个标记，改一个记得改另一个。
+
+安装入口在「我的」页（`/me/`）。Android/Chrome 走 `beforeinstallprompt` 一键装，
+iOS 没有这套 API，只能提示「分享 → 添加到主屏幕」。
+
+⚠️ 子站（`hugo-src/layouts/_partials/extend_head.html`）里引 manifest 和图标必须写
+**源根的绝对路径** `/manifest.webmanifest`，不能用 `relURL` —— 子站发布在 `/zbgamelttwo/` 下，
+`relURL` 会拼成 `/zbgamelttwo/manifest.webmanifest`，那是 404。
+
 ## 注意
 
 - Discussions 的正文由 GitHub 渲染成 HTML（`bodyHTML`），生成时会再过滤一遍
   `<script>`、`on*=` 之类的内容，但**发帖权限请只开给信任的人**，这是静态站的常规要求。
-- 不要手动编辑 `index.html` / `t/` / `404.html`，下次构建会覆盖。
+- 不要手动编辑 `index.html` / `t/` / `404.html` / `manifest.webmanifest`，下次构建会覆盖。

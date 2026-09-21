@@ -415,6 +415,11 @@ body.has-nav .fab { bottom: calc(var(--nav-h) + 22px); }
   text-decoration: underline; text-underline-offset: 3px;
 }
 .me__out:hover { color: var(--text); }
+/* 「安装到手机桌面」是 <button>：UA 会给它自己的边框/背景/字体，得拉回跟 <a> 行一样 */
+.me__row--btn {
+  width: 100%; background: none; border: 0; border-bottom: 1px solid var(--border);
+  font-family: inherit; font-size: 15.5px; text-align: left; cursor: pointer;
+}
 
 /* ── 我的帖子：卡片 + 右上角 3 点菜单 + 勾选 ── */
 .ownrow { position: relative; }

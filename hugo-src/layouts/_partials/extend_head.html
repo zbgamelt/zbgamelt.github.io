@@ -1,0 +1,15 @@
+{{- /*
+    PaperMod 的 <head> 扩展点：把论坛那边的 PWA 配置接过来。
+
+    ⚠️ 这里必须写死成「源根」的绝对路径（/manifest.webmanifest），不能用 relURL：
+    子站发布在 https://zbgamelt.github.io/zbgamelttwo/ 下，relURL 会拼成
+    /zbgamelttwo/manifest.webmanifest —— 而清单和图标都在**源根**，那样是 404。
+    论坛站和子站同源，所以从根路径引是对的。
+*/ -}}
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ZBGAME">

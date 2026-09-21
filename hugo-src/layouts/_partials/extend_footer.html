@@ -1,0 +1,9 @@
+{{- /* 子站也要能被「添加到主屏幕」：注册同一个 sw.js。
+       sw.js 在源根、作用域是整个源，所以写绝对路径（理由同 extend_head.html）。 */ -}}
+<script>
+  if ('serviceWorker' in navigator) {
+    addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    });
+  }
+</script>
