@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "file": "/download/zbgamelt-1.0.0.apk",
+  "size": 58613,
+  "sha256": "f504475cbb6e8bb5a7deacbb39c0257b264b2b177078778eb09fc8a2431f057f",
+  "updated": "2026-09-21",
+  "minSdk": 21,
+  "notes": "第一版：帖子列表、帖子详情、回帖、登录注册，全部在手机上原生操作，不套网页。"
+}
