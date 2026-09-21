@@ -945,6 +945,7 @@ function renderMe() {
     pageClass: 'page-me',
     script,
     bare: true,
+    fab: false,   // 「我的」页不放发布悬浮球：这里只管自己发过的东西
     navOn: 'me',
   });
 }
@@ -1287,7 +1288,9 @@ function render404() {
     <p>链接可能拼错了，或者帖子已经被删掉。</p>
     <a class="btn" href="/">回到论坛首页</a>
   </section>`;
-  return shell({ title: `页面不存在 — ${SITE.name}`, description: '404', body, nav: false });
+  // 404 什么都不挂：连站点头部也不要（深链下相对路径本来就不可靠），
+  // 页面里自带的「回到论坛首页」已经够指路了。
+  return shell({ title: `页面不存在 — ${SITE.name}`, description: '404', body, nav: false, bare: true, fab: false });
 }
 
 /**

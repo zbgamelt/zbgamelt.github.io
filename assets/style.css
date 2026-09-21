@@ -391,6 +391,9 @@ body.has-nav .fab { bottom: calc(var(--nav-h) + 22px); }
   background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
 }
 .tbar__menu button:hover { background: var(--card-2); color: var(--danger); }
+/* [hidden] 必须压过上面的 display，否则 hidden 属性形同虚设 ——
+   3 点按钮会变成「谁来看都显示」。 */
+.tbar__more[hidden], .tbar__menu[hidden] { display: none; }
 
 /* ── 「我的」页 ─────────────────────────── */
 .me { padding-top: 8px; }
