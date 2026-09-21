@@ -1,0 +1,61 @@
+{
+ "v": 1,
+ "generated": "2026-09-21T13:46:50.448Z",
+ "site": {
+  "title": "ZBGAME LT",
+  "desc": "轻量、干净的静态站点。写点东西，慢慢更新。",
+  "home": "https://zbgamelt.github.io/zbgamelttwo/",
+  "repo": "https://github.com/zbgamelt/zbgamelt.github.io"
+ },
+ "about": {
+  "title": "关于",
+  "md": "这里是一个用 Hugo 搭的静态站点。\n\n- 生成器：Hugo extended（`hugo.toml`）\n- 部署：GitHub Actions → GitHub Pages\n- 样式：站内 `assets/css/main.css`，无外部主题、无 CDN\n\n要改内容，往 `content/` 里加 Markdown 就行，推上去自动重建。"
+ },
+ "posts": [
+  {
+   "slug": "hello-world",
+   "title": "你好，世界",
+   "date": "2026-09-20T09:00:00Z",
+   "dateText": "2026-09-20",
+   "desc": "第一篇。为什么选 Hugo，以及日常写文章的两个命令。",
+   "tags": [
+    "Hugo",
+    "建站"
+   ],
+   "summary": "第一篇。为什么选 Hugo，以及日常写文章的两个命令。",
+   "reading": 1,
+   "url": "https://zbgamelt.github.io/zbgamelttwo/posts/hello-world/",
+   "md": "第一篇，先跑通链路。\n\n## 为什么用 Hugo\n\n- **快**：几百个页面也是毫秒级构建。\n- **单文件**：一个二进制，没有运行时依赖。\n- **纯静态**：产物就是 HTML/CSS/JS，扔到哪都能跑。\n\n## 写文章\n\n```bash\nhugo new content posts/my-post.md\nhugo server --buildDrafts   # 本地预览 http://localhost:1313\n```\n\n推送到 `main` 分支后，GitHub Actions 会自动构建并发布到 Pages。\n\n> 这句是引用块的样式示例。"
+  },
+  {
+   "slug": "subsite-in-existing-repo",
+   "title": "把 Hugo 子站挂进已有的 Pages 仓库",
+   "date": "2026-09-20T08:45:00Z",
+   "dateText": "2026-09-20",
+   "desc": "不用新开仓库：源放 hugo-src/，产物输出到 zbgamelttwo/，跟论坛共用同一个 Pages 站点。",
+   "tags": [
+    "Hugo",
+    "部署"
+   ],
+   "summary": "不用新开仓库：源放 hugo-src/，产物输出到 zbgamelttwo/，跟论坛共用同一个 Pages 站点。",
+   "reading": 1,
+   "url": "https://zbgamelt.github.io/zbgamelttwo/posts/subsite-in-existing-repo/",
+   "md": "想加这个站的时候，最直接的办法是新开一个仓库。但 Pages 的用户站点一个账号只有一个\n（`zbgamelt.github.io` 已经被论坛占了），所以改成**在已有仓库里挖一个子目录**。\n\n## 结构\n\n```text\nzbgamelt.github.io/\n├── scripts/build.mjs      # 论坛：把 Discussions 渲染成静态页\n├── index.html  t/  post/  # 论坛产物（由 CI 生成）\n├── hugo-src/              # ← 子站源（手写）\n│   ├── hugo.toml\n│   ├── content/  layouts/  assets/\n└── zbgamelttwo/           # ← 子站产物（由 CI 生成）\n```\n\n线上地址：<https://zbgamelt.github.io/zbgamelttwo/>\n\n## 两个容易踩的点\n\n**1. `baseURL` 必须带子路径。**\n\n```toml\nbaseURL = \"https://zbgamelt.github.io/zbgamelttwo/\"\n```\n\n**2. 模板里别用前导斜杠的 `relURL`。**\n\n```go-html-template\n{{ \"/posts/\" | relURL }}   <!-- ❌ 会输出 /posts/，丢掉 /zbgamelttwo/ 前缀 → 404 -->\n{{ \"posts/\"  | relURL }}   <!-- ✅ /zbgamelttwo/posts/ -->\n{{ (site.GetPage \"posts\").RelPermalink }}  <!-- ✅ 最稳 -->\n```\n\n这个坑很隐蔽：首页和导航看着都正常，点进去才 404。\n\n## 两条流水线并存\n\n论坛的 `build.yml` 只清理 `t/`、`post/`、`search/`、`index.html`、`404.html`，\n不碰子站目录；子站的 `hugo-subsite.yml` 只提交 `zbgamelttwo/`。\n两边都可能往 `main` 推，所以子站那条加了 rebase 重试，避免撞车。"
+  },
+  {
+   "slug": "deploy-hugo-pages",
+   "title": "本站是怎么部署的",
+   "date": "2026-09-20T08:30:00Z",
+   "dateText": "2026-09-20",
+   "desc": "Hugo + PaperMod，源在 hugo-src/，产物由 GitHub Actions 提交回 main，Pages 从仓库根目录发布。",
+   "tags": [
+    "部署",
+    "CI"
+   ],
+   "summary": "Hugo + PaperMod，源在 hugo-src/，产物由 GitHub Actions 提交回 main，Pages 从仓库根目录发布。",
+   "reading": 1,
+   "url": "https://zbgamelt.github.io/zbgamelttwo/posts/deploy-hugo-pages/",
+   "md": "写给以后的自己看。\n\n## 用了什么\n\n| 东西 | 选择 |\n| --- | --- |\n| 生成器 | Hugo extended 0.166.0 |\n| 主题 | [PaperMod](https://github.com/adityatelange/hugo-PaperMod)（**整个塞进 `themes/`**，不用 submodule / Hugo Modules） |\n| 样式覆盖 | `assets/css/extended/custom.css`（近黑底 + 黄色强调） |\n| 部署 | GitHub Actions 构建 → 提交回 `main` → Pages 直接发布 |\n\n## 目录\n\n```text\nhugo-src/                  # 手写，只有这个目录要动\n├── hugo.toml\n├── content/  layouts/（无，用主题的）\n├── assets/css/extended/custom.css\n├── i18n/zh-cn.yaml        # 补主题缺的中文标签\n└── themes/PaperMod/\nzbgamelttwo/               # 生成物，别手改\n```\n\n## 为什么产物要提交进仓库\n\n因为 Pages 是**从 `main` 分支根目录发布**的（分支部署，不是 artifact 部署）。\n所以 `hugo-subsite.yml` 构建完会把 `zbgamelttwo/` 提交回去，Pages 再自己重建。\n\n## 本地预览\n\n```bash\ncd hugo-src\nhugo server --buildDrafts        # http://localhost:1313\n```\n\n⚠️ 本地直接 `hugo` 出来的页面样式会**全丢**，因为 `baseURL` 带着 `/zbgamelttwo/` 前缀，\n本地服务器上这个路径不存在。要看真实效果得：\n\n```bash\nhugo --baseURL \"http://127.0.0.1:8902/\" -d /tmp/preview\n```"
+  }
+ ]
+}
