@@ -519,3 +519,24 @@ body.has-nav .fab { bottom: calc(var(--nav-h) + 22px); }
   text-decoration: underline; text-underline-offset: 3px;
 }
 .who__out:hover { color: var(--text); }
+
+/* ── 账号 / 管理面板（2026-09-21 加：/login/ /register/ /admin/）─────── */
+.auth,.admin{padding:16px 0 92px}
+.auth__t{margin:6px 0 8px;font-size:26px}
+.auth__sub{margin:0 0 18px;opacity:.72;font-size:14px}
+.auth__sub a{color:#ffd83d;text-decoration:none}
+.auth__sub a:hover{text-decoration:underline}
+.form{display:flex;flex-direction:column;gap:12px;max-width:430px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;opacity:.92}
+.field input{padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.03);color:inherit;font:inherit}
+.field input:focus{outline:2px solid #ffd83d55;outline-offset:1px}
+.stats{display:flex;gap:10px;margin:4px 0 22px;flex-wrap:wrap}
+.stat{flex:1 1 110px;border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.02)}
+.stat b{display:block;font-size:22px}
+.stat span{font-size:12px;opacity:.6}
+.admin__h{margin:22px 0 10px;font-size:17px}
+.admin__h span{font-size:13px;font-weight:400;opacity:.55}
+.row{display:flex;align-items:center;gap:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px;margin-bottom:9px;background:rgba(255,255,255,.02);flex-wrap:wrap}
+.row__t{font-weight:600;font-size:14px;word-break:break-all}
+.row__t i{font-weight:400;opacity:.55;font-style:normal;font-size:12px}
+.row__m{font-size:12px;opacity:.6;flex:1 1 100%}

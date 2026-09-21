@@ -1,0 +1,8 @@
+{{- /* 评论区：本站账号的评论系统（挂 Cloudflare Worker，不需要 GitHub 账号）。
+       这里只放一个空容器，真正的 UI 由 /assets/zsocial.js 挂载；
+       键用页面路径，所以同一篇文章的评论稳定落在一起。 */ -}}
+{{- $key := .RelPermalink | strings.TrimPrefix "/" | strings.TrimSuffix "/" -}}
+<section class="post-comments" aria-label="评论">
+  <div data-zcomments="{{ $key }}"></div>
+</section>
+<script src="/assets/zsocial.js" defer></script>

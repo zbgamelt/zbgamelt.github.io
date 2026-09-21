@@ -41,6 +41,8 @@ enableEmoji = true
   ShowCodeCopyButtons = true
   ShowToc = true
   TocOpen = false
+  # 打开评论：挂的是 assets/zsocial.js（本站账号，不需要 GitHub）
+  comments = true
   ShowFullTextinRSS = false
   hideFooter = false
 

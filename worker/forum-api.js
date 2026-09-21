@@ -27,6 +27,24 @@
  *   GET  /my-posts              我发过的帖子（拿登录者自己的 token 查，只返回他本人的）
  *   POST /delete-post           删帖 { numbers:[…] }，只能删自己发的
  *   POST /new-post              发帖 { title, body }，需 Bearer 会话号
+ *
+ * 站内账号（2026-09-21 加，邮箱 + 密码，不依赖 GitHub）：
+ *   POST /register             注册 { email, name, password } → 直接给会话号
+ *   POST /login                登录 { email, password } → 会话号
+ *   GET  /api/me               现在会带 role/kind，邮箱账号也认
+ *
+ * 评论（2026-09-21 加，博客文章与论坛帖子共用一套）：
+ *   GET  /comments?p=<键>       读某处的评论（公开）
+ *   POST /comment              发评论 { p, body }，需登录
+ *   POST /comment/delete       删自己的评论 { p, id }
+ *
+ * 管理面板接口（只有 role=admin 能用）：
+ *   GET  /admin/summary        用户 + 最近评论总览
+ *   POST /admin/user           封 / 解封 { email, ban }
+ *   POST /admin/comment-delete 删任意评论 { p, id }
+ *
+ * 数据都放 KV：
+ *   u:<email> 用户记录 · un:<名字> 名字占用索引 · cmt:<键> 评论数组 · sess:<会话号>
  */
 
 const REPO_ID = 'R_kgDOUiCTAQ';                     // zbgamelt/zbgamelt.github.io
@@ -43,6 +61,25 @@ const COOLDOWN_SEC = 120;        // 同一 IP 两次发帖的最小间隔
 const DAILY_CAP = 30;            // 每天最多新建多少帖（防灌水兜底）
 const SESSION_TTL = 60 * 60 * 24 * 30;   // 登录状态保留 30 天
 const STATE_TTL = 600;                    // 授权跳转的 state 有效期 10 分钟
+
+/* ---------- 站内账号 / 评论 / 管理 的口径 ---------- */
+
+// 谁是管理员：这里列 GitHub 登录名（小写）。
+// 注意：光看 session 里的 r 字段不够 —— 老板早先登录拿到的会话里没有 r，
+// 改完名单后它应该立刻生效，所以鉴权一律走 isAdmin()。
+const ADMIN_LOGINS = ['zbgamelt', 'zbgame001'];
+
+const PBKDF2_ITER = 100000;      // 密码哈希轮数（⚠️ Workers 的 WebCrypto 上限就是 10 万，写更大直接抛错）
+const PW_MIN = 8;
+const EMAIL_MAX = 120;
+const COMMENT_MIN = 2;
+const COMMENT_MAX = 2000;
+const COMMENTS_PER_KEY = 300;    // 单个页面/帖子最多留多少条
+
+const REG_PER_HOUR = 5;          // 每 IP 每小时注册上限
+const LOGIN_TRIES = 10;          // 每 IP 每 15 分钟登录尝试上限
+const LOGIN_WINDOW = 900;
+const COMMENT_PER_10MIN = 20;    // 每 IP 每 10 分钟评论上限
 
 const allowOrigin = (env) => env.ALLOW_ORIGIN || DEFAULT_ORIGIN;
 
@@ -84,6 +121,89 @@ function safeReturn(raw, env) {
 
 /** 回调地址必须和 OAuth App 里登记的一字不差，所以从请求里推。 */
 const callbackUrl = (url) => `${url.origin}/auth/callback`;
+
+/* ---------- 账号 / 评论 用的工具 ---------- */
+
+const b64 = (u8) => btoa(String.fromCharCode(...u8));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) && e.length <= EMAIL_MAX;
+const nameOk = (n) => /^[\w\u4e00-\u9fa5.-]{2,20}$/.test(n);
+
+/** PBKDF2-SHA256；salt 不给就现生成一个。 */
+async function hashPw(pw, saltB64) {
+  const salt = saltB64 ? unb64(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(pw),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: PBKDF2_ITER, hash: 'SHA-256' },
+    key,
+    256,
+  );
+  return { s: b64(salt), h: b64(new Uint8Array(bits)) };
+}
+
+/** 定长比较，别让比较耗时泄露信息。 */
+function sameHash(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let out = 0;
+  for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return out === 0;
+}
+
+const roleOf = (name) =>
+  name && ADMIN_LOGINS.includes(String(name).toLowerCase()) ? 'admin' : 'user';
+
+/** 会话是不是管理员：名单实时判定，不依赖会话里存死的 r。 */
+const isAdmin = (s) =>
+  !!s && (s.r === 'admin' || ADMIN_LOGINS.includes(String(s.l || '').toLowerCase()));
+
+const requestIP = (request) => request.headers.get('CF-Connecting-IP') || '0.0.0.0';
+
+/** 简易滑动窗口限流：KV 的过期时间就是窗口本身。 */
+async function tooMany(env, scope, ip, limit, windowSec) {
+  const k = `rl:${scope}:${ip}`;
+  const n = Number((await env.RL.get(k)) || 0);
+  if (n >= limit) return true;
+  await env.RL.put(k, String(n + 1), { expirationTtl: windowSec });
+  return false;
+}
+
+/** 新建会话，返回会话号（片段里交给前端存）。 */
+async function newSession(env, data) {
+  const sid = crypto.randomUUID();
+  await env.RL.put(`sess:${sid}`, JSON.stringify(data), { expirationTtl: SESSION_TTL });
+  return sid;
+}
+
+/** 评论挂在哪：文章路径或帖子编号，只留安全字符。 */
+const commentKey = (raw) =>
+  String(raw || '')
+    .trim()
+    .slice(0, 200)
+    .replace(/[^A-Za-z0-9/_.:-]/g, '')
+    .replace(/^\/+|\/+$/g, '');
+
+async function readComments(env, key) {
+  const raw = await env.RL.get(`cmt:${key}`);
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+const publicComment = (c) => ({ id: c.id, n: c.n, a: c.a || '', b: c.b, ts: c.ts });
+
+/** 这条评论归谁：邮箱账号看邮箱，GitHub 账号看登录名。 */
+const ownerOf = (s) => (s.k === 'gh' ? `gh:${String(s.l).toLowerCase()}` : `e:${s.e}`);
 
 async function exchangeCode(env, code, redirectUri) {
   const res = await fetch('https://github.com/login/oauth/access_token', {
@@ -254,11 +374,22 @@ async function pokeRebuild(env) {
 
 export default {
   async fetch(request, env, ctx) {
+    // 兜底：任何没接住的异常都翻成 JSON，别甩给访客一张 Cloudflare 1101 白页。
+    try {
+      return await handle(request, env, ctx);
+    } catch (err) {
+      const msg = String((err && err.message) || err).slice(0, 200);
+      return json(env, { error: `服务端出错了：${msg}` }, 500);
+    }
+  },
+};
+
+async function handle(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(env) });
-    if (path === '/health') return json(env, { ok: true, ts: Date.now() });
+    if (path === '/health') return json(env, { ok: true, ts: Date.now(), v: 5 });
 
     /* ---------- 登录 ---------- */
 
@@ -292,12 +423,13 @@ export default {
       const me = await ghUser(token);
       if (!me) return notice('拿到了 token 但读不到你的 GitHub 账号，请重试。', 502);
 
-      const sid = crypto.randomUUID();
-      await env.RL.put(
-        `sess:${sid}`,
-        JSON.stringify({ t: token, l: me.login, a: me.avatar_url || '' }),
-        { expirationTtl: SESSION_TTL },
-      );
+      const sid = await newSession(env, {
+        t: token,
+        l: me.login,
+        a: me.avatar_url || '',
+        r: roleOf(me.login),
+        k: 'gh',
+      });
       // 会话号放片段：不发给服务器、不进 Referer
       return Response.redirect(`${back}#s=${sid}`, 302);
     }
@@ -312,7 +444,13 @@ export default {
     if (path === '/api/me' && request.method === 'GET') {
       const s = await sessionOf(request, env);
       if (!s) return json(env, { error: '没登录' }, 401);
-      return json(env, { login: s.l, avatar: s.a });
+      return json(env, {
+        login: s.l,
+        name: s.l,
+        avatar: s.a || '',
+        role: isAdmin(s) ? 'admin' : s.r || 'user',
+        kind: s.k || 'gh',
+      });
     }
 
     /* ---------- 我的 / 删帖 ---------- */
@@ -320,6 +458,8 @@ export default {
     if (path === '/my-posts' && request.method === 'GET') {
       const s = await sessionOf(request, env);
       if (!s) return json(env, { error: '请先用 GitHub 登录' }, 401);
+      // 「我的帖子」列的是 GitHub Discussions，邮箱注册的账号没有 GitHub token。
+      if (!s.t) return json(env, { error: '这个功能要 GitHub 登录（站内邮箱账号看不到）' }, 400);
       let nodes;
       try {
         const data = await gql(s.t, MINE_QUERY, { owner: OWNER, name: NAME });
@@ -389,6 +529,202 @@ export default {
 
     /* ---------- 发帖 ---------- */
 
+    /* ---------- 注册 / 登录（邮箱 + 密码） ---------- */
+
+    if (path === '/register' && request.method === 'POST') {
+      const ip = requestIP(request);
+      if (await tooMany(env, 'reg', ip, REG_PER_HOUR, 3600)) {
+        return json(env, { error: '注册太频繁了，过一会儿再试' }, 429);
+      }
+      const p = await request.json().catch(() => ({}));
+      const email = String(p.email ?? '').trim().toLowerCase();
+      const name = String(p.name ?? '').trim();
+      const pw = String(p.password ?? '');
+      if (!emailOk(email)) return json(env, { error: '邮箱格式不对' }, 400);
+      if (!nameOk(name)) return json(env, { error: '名字 2-20 个字，中英文/数字都行，不能有空格' }, 400);
+      // admin 只看 GitHub 登录名，所以站长的名字不能被别人抢注（否则等于白送管理员）。
+      if (ADMIN_LOGINS.includes(name.toLowerCase())) {
+        return json(env, { error: '这个名字留给站长了，换一个' }, 403);
+      }
+      if (pw.length < PW_MIN) return json(env, { error: `密码至少 ${PW_MIN} 位` }, 400);
+      if (await env.RL.get(`u:${email}`)) return json(env, { error: '这个邮箱已经注册过了' }, 409);
+      if (await env.RL.get(`un:${name.toLowerCase()}`)) return json(env, { error: '这个名字被占用了，换一个' }, 409);
+
+      const { s, h } = await hashPw(pw);
+      const rec = { e: email, n: name, s, h, ts: Date.now(), r: 'user', b: false };
+      await env.RL.put(`u:${email}`, JSON.stringify(rec));
+      await env.RL.put(`un:${name.toLowerCase()}`, email);
+      const sid = await newSession(env, { e: email, l: name, a: '', r: 'user', k: 'pw' });
+      return json(env, { ok: true, sid, name, role: 'user' });
+    }
+
+    if (path === '/login' && request.method === 'POST') {
+      const ip = requestIP(request);
+      if (await tooMany(env, 'login', ip, LOGIN_TRIES, LOGIN_WINDOW)) {
+        return json(env, { error: '试得太频繁了，等 15 分钟再来' }, 429);
+      }
+      const p = await request.json().catch(() => ({}));
+      const email = String(p.email ?? '').trim().toLowerCase();
+      const pw = String(p.password ?? '');
+      const raw = email ? await env.RL.get(`u:${email}`) : null;
+      if (!raw) return json(env, { error: '邮箱或密码不对' }, 401);
+      let rec;
+      try {
+        rec = JSON.parse(raw);
+      } catch {
+        return json(env, { error: '账号数据读不出来，找站长' }, 500);
+      }
+      const { h } = await hashPw(pw, rec.s);
+      if (!sameHash(h, rec.h)) return json(env, { error: '邮箱或密码不对' }, 401);
+      if (rec.b) return json(env, { error: '这个账号被封了' }, 403);
+      const sid = await newSession(env, { e: rec.e, l: rec.n, a: '', r: rec.r || 'user', k: 'pw' });
+      return json(env, { ok: true, sid, name: rec.n, role: rec.r || 'user' });
+    }
+
+    /* ---------- 评论 ---------- */
+
+    if (path === '/comments' && request.method === 'GET') {
+      const key = commentKey(url.searchParams.get('p'));
+      if (!key) return json(env, { error: '缺少 p 参数' }, 400);
+      const list = await readComments(env, key);
+      return json(env, { ok: true, key, comments: list.map(publicComment) });
+    }
+
+    if (path === '/comment' && request.method === 'POST') {
+      const s = await sessionOf(request, env);
+      if (!s) return json(env, { error: '先登录再评论' }, 401);
+      if (await tooMany(env, 'cmt', requestIP(request), COMMENT_PER_10MIN, 600)) {
+        return json(env, { error: '发得有点快，歇一会儿再发' }, 429);
+      }
+      const p = await request.json().catch(() => ({}));
+      const key = commentKey(p.p);
+      const body = String(p.body ?? '').trim();
+      if (!key) return json(env, { error: '缺少 p 参数' }, 400);
+      if (body.length < COMMENT_MIN) return json(env, { error: '内容太短了' }, 400);
+      if (body.length > COMMENT_MAX) return json(env, { error: `内容最长 ${COMMENT_MAX} 字` }, 400);
+
+      // 邮箱账号被封就发不了（GitHub 账号的封禁在 GitHub 那边管）
+      if (s.e) {
+        const raw = await env.RL.get(`u:${s.e}`);
+        if (raw) {
+          try {
+            if (JSON.parse(raw).b) return json(env, { error: '这个账号被封了' }, 403);
+          } catch {
+            /* 读不出来就当没封 */
+          }
+        }
+      }
+
+      const list = await readComments(env, key);
+      if (list.length >= COMMENTS_PER_KEY) {
+        return json(env, { error: '这条下面的评论太多了，新开一层吧' }, 429);
+      }
+      const c = {
+        id: crypto.randomUUID(),
+        n: s.l,
+        a: s.a || '',
+        b: body,
+        ts: Date.now(),
+        by: ownerOf(s),
+      };
+      list.push(c);
+      await env.RL.put(`cmt:${key}`, JSON.stringify(list));
+      return json(env, { ok: true, comment: publicComment(c) });
+    }
+
+    if (path === '/comment/delete' && request.method === 'POST') {
+      const s = await sessionOf(request, env);
+      if (!s) return json(env, { error: '先登录' }, 401);
+      const p = await request.json().catch(() => ({}));
+      const key = commentKey(p.p);
+      const id = String(p.id || '');
+      if (!key || !id) return json(env, { error: '参数不全' }, 400);
+      const list = await readComments(env, key);
+      const target = list.find((x) => x.id === id);
+      if (!target) return json(env, { error: '这条评论已经不在了' }, 404);
+      if (s.r !== 'admin' && !isAdmin(s) && target.by !== ownerOf(s)) {
+        return json(env, { error: '只能删自己的评论' }, 403);
+      }
+      await env.RL.put(`cmt:${key}`, JSON.stringify(list.filter((x) => x.id !== id)));
+      return json(env, { ok: true });
+    }
+
+    /* ---------- 管理面板 ---------- */
+
+    if (path.startsWith('/admin/')) {
+      const s = await sessionOf(request, env);
+      if (!s) return json(env, { error: '先登录' }, 401);
+      if (!isAdmin(s)) return json(env, { error: '这里只有管理员能看' }, 403);
+
+      if (path === '/admin/summary' && request.method === 'GET') {
+        const users = [];
+        let cursor;
+        do {
+          const page = await env.RL.list({ prefix: 'u:', limit: 100, cursor });
+          for (const k of page.keys) {
+            const raw = await env.RL.get(k.name);
+            if (!raw) continue;
+            try {
+              const u = JSON.parse(raw);
+              users.push({ e: u.e, n: u.n, ts: u.ts, r: u.r || 'user', b: !!u.b });
+            } catch {
+              /* 坏记录跳过 */
+            }
+          }
+          cursor = page.list_complete ? null : page.cursor;
+        } while (cursor && users.length < 300);
+        users.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+        const comments = [];
+        const cpage = await env.RL.list({ prefix: 'cmt:', limit: 100 });
+        for (const k of cpage.keys) {
+          const key = k.name.slice(4);
+          for (const c of await readComments(env, key)) {
+            comments.push({ ...publicComment(c), key });
+          }
+        }
+        comments.sort((a, b) => b.ts - a.ts);
+
+        return json(env, {
+          ok: true,
+          me: s.l,
+          users,
+          threads: cpage.keys.length,
+          totalComments: comments.length,
+          recent: comments.slice(0, 60),
+        });
+      }
+
+      if (path === '/admin/user' && request.method === 'POST') {
+        const p = await request.json().catch(() => ({}));
+        const email = String(p.email ?? '').trim().toLowerCase();
+        const raw = email ? await env.RL.get(`u:${email}`) : null;
+        if (!raw) return json(env, { error: '没有这个用户' }, 404);
+        let rec;
+        try {
+          rec = JSON.parse(raw);
+        } catch {
+          return json(env, { error: '用户记录坏了' }, 500);
+        }
+        rec.b = !!p.ban;
+        await env.RL.put(`u:${email}`, JSON.stringify(rec));
+        return json(env, { ok: true, email, banned: rec.b });
+      }
+
+      if (path === '/admin/comment-delete' && request.method === 'POST') {
+        const p = await request.json().catch(() => ({}));
+        const key = commentKey(p.p);
+        const id = String(p.id || '');
+        if (!key || !id) return json(env, { error: '参数不全' }, 400);
+        const list = await readComments(env, key);
+        if (!list.some((x) => x.id === id)) return json(env, { error: '这条评论已经不在了' }, 404);
+        await env.RL.put(`cmt:${key}`, JSON.stringify(list.filter((x) => x.id !== id)));
+        return json(env, { ok: true, key, id });
+      }
+
+      return json(env, { error: '没有这个管理接口' }, 404);
+    }
+
     if (path !== '/new-post' || request.method !== 'POST') {
       return json(env, { error: '没有这个接口' }, 404);
     }
@@ -441,6 +777,5 @@ export default {
     await env.RL.put(dayKey, String(usedToday + 1), { expirationTtl: 172800 });
     ctx.waitUntil(pokeRebuild(env));
 
-    return json(env, { ok: true, number: discussion.number, url: discussion.url });
-  },
-};
+  return json(env, { ok: true, number: discussion.number, url: discussion.url });
+}

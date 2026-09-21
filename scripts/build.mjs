@@ -886,6 +886,7 @@ function renderMe() {
     <div class="gate" id="gate">
       <p>用 GitHub 账号登录后，这里能看到你自己的帖子。</p>
       <a class="btn" id="login">用 GitHub 登录</a>
+      <a class="btn btn--ghost" href="../login/">用邮箱登录 / 注册</a>
     </div>
     <div id="mebody" hidden>
       <div class="me__id">
@@ -894,6 +895,10 @@ function renderMe() {
       </div>
       <a class="me__row" href="posts/">
         <span>我的发帖</span>
+        <span class="me__chev" aria-hidden="true">›</span>
+      </a>
+      <a class="me__row" id="me__admin" href="../admin/" hidden>
+        <span>管理面板</span>
         <span class="me__chev" aria-hidden="true">›</span>
       </a>
       <p class="me__foot"><button class="me__out" id="out" type="button">退出登录</button></p>
@@ -919,6 +924,7 @@ function renderMe() {
     gate.hidden = true;
     mebody.hidden = false;
     document.getElementById('me__name').textContent = '@' + d.login;
+    if (d.role === 'admin') { document.getElementById('me__admin').hidden = false; }
     var av = document.getElementById('me__av');
     if (d.avatar) { av.src = d.avatar; } else { av.hidden = true; }
   }
@@ -1401,6 +1407,194 @@ function verifyGeneratedPages() {
 
 const pages = [];
 
+/* ── 邮箱账号 / 管理面板（2026-09-21 加）──────────────────────────
+ * 这三个页面的逻辑都走 /assets/zsocial.js（会话号存 localStorage 的 'zbforum_sess'，
+ * 跟 /me/、/post/ 共用），所以登录一次全站都认。
+ */
+
+function renderLogin() {
+  const base = '../';
+  const body = `  <section class="auth">
+    <h1 class="auth__t">用邮箱登录</h1>
+    <p class="auth__sub">还没有账号？<a href="${base}register/">去注册一个</a>（不需要 GitHub）。</p>
+    <div class="form">
+      <label class="field"><span>邮箱</span><input id="e" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <label class="field"><span>密码</span><input id="p" type="password" autocomplete="current-password" placeholder="你的密码"></label>
+      <button class="btn" id="go" type="button">登录</button>
+      <a class="btn btn--ghost" href="${base}me/">改用 GitHub 登录</a>
+    </div>
+    <p class="note" id="note" role="status" aria-live="polite"></p>
+  </section>`;
+  const script = `<script src="${base}assets/zsocial.js"></script>
+<script>
+(function () {
+  var note = document.getElementById('note');
+  var go = document.getElementById('go');
+  var back = new URLSearchParams(location.search).get('return') || '/me/';
+  if (back.charAt(0) !== '/') back = '/me/';
+  function submit() {
+    note.textContent = '';
+    go.disabled = true;
+    ZB.login(document.getElementById('e').value.trim(), document.getElementById('p').value)
+      .then(function () { location.href = back; }, function (err) {
+        note.textContent = err.message;
+        go.disabled = false;
+      });
+  }
+  go.addEventListener('click', submit);
+  document.getElementById('p').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') submit(); });
+})();
+</script>`;
+  return shell({
+    title: `登录 — ${SITE.name}`,
+    description: '用邮箱账号登录',
+    body,
+    base,
+    pageClass: 'page-auth',
+    script,
+    bare: true,
+    fab: false,
+    navOn: 'me',
+  });
+}
+
+function renderRegister() {
+  const base = '../';
+  const body = `  <section class="auth">
+    <h1 class="auth__t">注册</h1>
+    <p class="auth__sub">填个邮箱和昵称就能用。已经有账号了？<a href="${base}login/">去登录</a>。</p>
+    <div class="form">
+      <label class="field"><span>邮箱</span><input id="e" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <label class="field"><span>昵称</span><input id="n" type="text" autocomplete="nickname" placeholder="2-20 个字，中英文都行"></label>
+      <label class="field"><span>密码</span><input id="p" type="password" autocomplete="new-password" placeholder="至少 8 位"></label>
+      <button class="btn" id="go" type="button">注册并登录</button>
+      <a class="btn btn--ghost" href="${base}me/">用 GitHub 登录</a>
+    </div>
+    <p class="note" id="note" role="status" aria-live="polite"></p>
+    <p class="auth__sub" style="margin-top:16px">暂时没有邮箱验证和找回密码 —— 密码自己记牢。</p>
+  </section>`;
+  const script = `<script src="${base}assets/zsocial.js"></script>
+<script>
+(function () {
+  var note = document.getElementById('note');
+  var go = document.getElementById('go');
+  function submit() {
+    note.textContent = '';
+    go.disabled = true;
+    ZB.register(
+      document.getElementById('e').value.trim(),
+      document.getElementById('n').value.trim(),
+      document.getElementById('p').value
+    ).then(function () { location.href = '/me/'; }, function (err) {
+      note.textContent = err.message;
+      go.disabled = false;
+    });
+  }
+  go.addEventListener('click', submit);
+  document.getElementById('p').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') submit(); });
+})();
+</script>`;
+  return shell({
+    title: `注册 — ${SITE.name}`,
+    description: '注册一个站内账号',
+    body,
+    base,
+    pageClass: 'page-auth',
+    script,
+    bare: true,
+    fab: false,
+    navOn: 'me',
+  });
+}
+
+function renderAdmin() {
+  const base = '../';
+  const body = `  <section class="admin">
+    <h1 class="auth__t">管理面板</h1>
+    <p class="note" id="note" role="status" aria-live="polite">正在确认身份…</p>
+    <div id="deny" hidden>
+      <p class="auth__sub" id="denytxt">这里只有管理员能看。</p>
+      <a class="btn" href="${base}login/?return=%2Fadmin%2F">去登录</a>
+    </div>
+    <div id="panel" hidden>
+      <div class="stats" id="stats"></div>
+      <h2 class="admin__h">用户 <span id="un"></span></h2>
+      <div id="users"></div>
+      <h2 class="admin__h">最近的评论</h2>
+      <div id="cmts"></div>
+    </div>
+  </section>`;
+  const script = `<script src="${base}assets/zsocial.js"></script>
+<script>
+(function () {
+  var note = document.getElementById('note');
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function when(ts) {
+    var d = new Date(Number(ts) || 0);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function draw(d) {
+    document.getElementById('stats').innerHTML =
+      '<div class="stat"><b>' + d.users.length + '</b><span>注册用户</span></div>' +
+      '<div class="stat"><b>' + d.threads + '</b><span>有评论的位置</span></div>' +
+      '<div class="stat"><b>' + d.totalComments + '</b><span>评论总数</span></div>';
+    document.getElementById('un').textContent = '(' + d.users.length + ')';
+    document.getElementById('users').innerHTML = d.users.length ? d.users.map(function (u) {
+      return '<div class="row"><span class="row__t">' + esc(u.n) + ' <i>' + esc(u.e) + '</i></span>' +
+        '<span class="row__m">' + esc(when(u.ts)) + (u.r === 'admin' ? ' · 管理员' : '') + (u.b ? ' · 已封' : '') + '</span>' +
+        '<button class="btn btn--ghost" data-ban="' + esc(u.e) + '" data-on="' + (u.b ? '0' : '1') + '">' + (u.b ? '解封' : '封号') + '</button></div>';
+    }).join('') : '<p class="auth__sub">还没有人注册。</p>';
+    document.getElementById('cmts').innerHTML = d.recent.length ? d.recent.map(function (c) {
+      return '<div class="row"><span class="row__t">' + esc(c.n) + ' <i>' + esc(c.key) + '</i></span>' +
+        '<span class="row__m">' + esc(String(c.b || '').slice(0, 90)) + ' · ' + esc(when(c.ts)) + '</span>' +
+        '<button class="btn btn--ghost" data-del="' + esc(c.key) + '|' + esc(c.id) + '">删除</button></div>';
+    }).join('') : '<p class="auth__sub">还没有评论。</p>';
+  }
+  function load() {
+    ZB.adminSummary().then(function (d) {
+      note.textContent = '';
+      document.getElementById('panel').hidden = false;
+      draw(d);
+    }, function (err) {
+      note.textContent = '';
+      document.getElementById('deny').hidden = false;
+      document.getElementById('denytxt').textContent =
+        err.status === 401 ? '你还没登录。' : '这个账号不是管理员。';
+    });
+  }
+  document.getElementById('users').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-ban]');
+    if (!b) return;
+    ZB.adminBan(b.getAttribute('data-ban'), b.getAttribute('data-on') === '1')
+      .then(load, function (e) { note.textContent = e.message; });
+  });
+  document.getElementById('cmts').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-del]');
+    if (!b) return;
+    if (!window.confirm('删掉这条评论？')) return;
+    var parts = b.getAttribute('data-del').split('|');
+    ZB.adminRemoveComment(parts[0], parts[1]).then(load, function (e) { note.textContent = e.message; });
+  });
+  load();
+})();
+</script>`;
+  return shell({
+    title: `管理面板 — ${SITE.name}`,
+    description: '站点管理：用户与评论',
+    body,
+    base,
+    pageClass: 'page-admin',
+    script,
+    bare: true,
+    fab: false,
+    navOn: 'me',
+  });
+}
+
 function writePage(relPath, html, label) {
   assertNoNestedAnchors(html, label || relPath);
   assertInlineScriptsParse(html, label || relPath);
@@ -1447,6 +1641,9 @@ async function main() {
   writePage(join('search', 'index.html'), renderSearch(discussions), 'search/index.html');
   writePage(join('me', 'index.html'), renderMe(), 'me/index.html');
   writePage(join('me', 'posts', 'index.html'), renderMyPosts(), 'me/posts/index.html');
+  writePage(join('login', 'index.html'), renderLogin(), 'login/index.html');
+  writePage(join('register', 'index.html'), renderRegister(), 'register/index.html');
+  writePage(join('admin', 'index.html'), renderAdmin(), 'admin/index.html');
   writeFileSync(join(ROOT, '.nojekyll'), '');
   mkdirSync(join(ROOT, 'assets'), { recursive: true });
 
