@@ -108,6 +108,9 @@
     '.zc__box textarea{width:100%;box-sizing:border-box;min-height:84px;resize:vertical;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:inherit;font:inherit}',
     '.zc__box textarea:focus{outline:2px solid #ffd83d55;outline-offset:1px}',
     '.zc__row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}',
+    // 必须有这条：上面 .zc__row 的 display:flex 会盖掉 [hidden] 的 display:none，
+    // 不加的话「注册」那一行会一上来就显出来（踩过）。
+    '.zc__row[hidden]{display:none}',
     '.zc__row input{flex:1 1 150px;min-width:0;padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:inherit;font:inherit}',
     '.zc__btn{border:0;border-radius:10px;padding:9px 16px;background:#ffd83d;color:#1a1a1a;font:inherit;font-weight:600;cursor:pointer}',
     '.zc__btn[disabled]{opacity:.5;cursor:default}',
