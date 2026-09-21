@@ -372,6 +372,66 @@ async function pokeRebuild(env) {
   }
 }
 
+/* ---------- 帖子（手机 App 读的只读接口）---------- */
+
+/**
+ * 帖子数据源。
+ *
+ * 为什么不直接问 GitHub：读 Discussions 的 GraphQL **必须**带 token，而 Worker 里
+ * 没有可用的机器人 token —— 发帖用的是**登录者自己**的 token（createDiscussion(env, session.t, ...)），
+ * 访客来读的时候手上根本没有 token。
+ * 所以读这份 CI 每次构建都会刷新的公开镜像（跟 Discussions 同源同内容，不带正文的整套 HTML 处理）。
+ */
+const THREADS_URL = 'https://zbgamelt.github.io/data/discussions.json';
+const THREADS_TTL = 120;        // KV 缓存秒数：别每个请求都去打一次
+const THREADS_PER_MAX = 50;
+
+// GitHub 给的是短码（":mega:"），认得的翻成真 emoji，认不得的宁可留白
+const CAT_EMOJI = {
+  ':mega:': '📣', ':bulb:': '💡', ':speech_balloon:': '💬', ':pencil:': '✏️',
+  ':bar_chart:': '📊', ':question:': '❓', ':raised_hands:': '🙌', ':tada:': '🎉',
+  ':sparkles:': '✨', ':loudspeaker:': '📢', ':bug:': '🐛', ':rocket:': '🚀',
+  ':thought_balloon:': '🗨️',
+};
+const catEmoji = (e) => {
+  const s = String(e || '').trim();
+  if (!s) return '';
+  if (CAT_EMOJI[s]) return CAT_EMOJI[s];
+  return s.startsWith(':') && s.endsWith(':') ? '' : s;
+};
+
+async function loadThreads(env) {
+  const hit = await env.RL.get('thr:json');
+  if (hit) {
+    try {
+      const arr = JSON.parse(hit);
+      if (Array.isArray(arr)) return arr;
+    } catch {
+      /* 缓存坏了就往下走去拉新的 */
+    }
+  }
+  const res = await fetch(THREADS_URL, { headers: { 'User-Agent': 'zbgamelt-forum-api' } });
+  if (!res.ok) throw new Error(`读帖子列表失败（HTTP ${res.status}）`);
+  const d = await res.json().catch(() => null);
+  const list = Array.isArray(d?.discussions) ? d.discussions : [];
+  await env.RL.put('thr:json', JSON.stringify(list), { expirationTtl: THREADS_TTL });
+  return list;
+}
+
+/** 列表里一条帖子：只给 App 要显示的字段，正文只留摘要。 */
+const threadCard = (d) => ({
+  n: d.number,
+  t: d.title,
+  by: d.author?.login || '',
+  av: d.author?.avatarUrl || '',
+  at: Date.parse(d.createdAt) || 0,
+  us: Date.parse(d.updatedAt) || Date.parse(d.createdAt) || 0,
+  cat: d.category?.name || '',
+  emoji: catEmoji(d.category?.emoji),
+  ex: excerptOf(d.bodyHTML),
+  cn: d.comments?.totalCount || 0,
+});
+
 export default {
   async fetch(request, env, ctx) {
     // 兜底：任何没接住的异常都翻成 JSON，别甩给访客一张 Cloudflare 1101 白页。
@@ -389,7 +449,7 @@ async function handle(request, env, ctx) {
     const path = url.pathname;
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(env) });
-    if (path === '/health') return json(env, { ok: true, ts: Date.now(), v: 5 });
+    if (path === '/health') return json(env, { ok: true, ts: Date.now(), v: 6 });
 
     /* ---------- 登录 ---------- */
 
@@ -579,6 +639,51 @@ async function handle(request, env, ctx) {
       if (rec.b) return json(env, { error: '这个账号被封了' }, 403);
       const sid = await newSession(env, { e: rec.e, l: rec.n, a: '', r: rec.r || 'user', k: 'pw' });
       return json(env, { ok: true, sid, name: rec.n, role: rec.r || 'user' });
+    }
+
+    /* ---------- 帖子（手机 App 读）---------- */
+
+    // 帖子列表（分页）。App 首页拉这个。
+    if (path === '/api/threads' && request.method === 'GET') {
+      const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+      const per = Math.min(THREADS_PER_MAX, Math.max(1, Number(url.searchParams.get('per')) || 20));
+      let all;
+      try {
+        all = await loadThreads(env);
+      } catch (err) {
+        return json(env, { error: err.message }, 502);
+      }
+      const total = all.length;
+      const start = (page - 1) * per;
+      return json(env, {
+        ok: true,
+        page,
+        per,
+        total,
+        pages: Math.max(1, Math.ceil(total / per)),
+        threads: all.slice(start, start + per).map(threadCard),
+      });
+    }
+
+    // 单篇帖子：正文 + 评论一次给全，App 详情页只要一个请求。
+    if (path === '/api/thread' && request.method === 'GET') {
+      const n = Number(url.searchParams.get('n'));
+      if (!n) return json(env, { error: '缺少 n 参数' }, 400);
+      let all;
+      try {
+        all = await loadThreads(env);
+      } catch (err) {
+        return json(env, { error: err.message }, 502);
+      }
+      const d = all.find((x) => Number(x.number) === n);
+      if (!d) return json(env, { error: '这条帖子已经不在了' }, 404);
+      // 评论走站内那套：帖子回复早就搬到 KV 了，不在 GitHub 上
+      const list = await readComments(env, commentKey(`t/${n}`));
+      return json(env, {
+        ok: true,
+        thread: { ...threadCard(d), html: d.bodyHTML || '', url: d.url || '' },
+        comments: list.map(publicComment),
+      });
     }
 
     /* ---------- 评论 ---------- */

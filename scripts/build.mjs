@@ -907,6 +907,85 @@ function renderCompose() {
  * 「我的」页：第一行大头像 + GitHub 用户名，第二行「我的发帖」入口。
  * 站点依然是纯静态 —— 这里只有 API 地址和会话号，凭据都在 Worker 那边。
  */
+/**
+ * Android App 的元信息（data/app.json）。
+ *
+ * APK 文件本身放在仓库的 download/ 下，由 GitHub Pages 直接发 —— 刻意**不**放在那台
+ * 服务器的域名里（用户明确要求）。构建不会碰 download/，这里只读元信息渲染下载页。
+ */
+function loadApp() {
+  try {
+    return JSON.parse(readFileSync(join(ROOT, 'data', 'app.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function fmtSize(bytes) {
+  const n = Number(bytes) || 0;
+  if (!n) return '';
+  return n < 1024 * 1024
+    ? (n / 1024).toFixed(0) + ' KB'
+    : (n / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+/**
+ * 下载页（/app/）：原生 Android 客户端的安装包。
+ *
+ * 跟「装到手机桌面」是两个不同的东西，别搞乱：
+ *   · 这里给的是真 APK（原生 View 调的接口，不是 WebView 套壳）
+ *   · PWA 那个入口在 /me/，不用装包，iOS 也能用
+ */
+function renderDownload() {
+  const a = loadApp();
+  const base = '../';
+  const file = a?.file || '';
+  const size = fmtSize(a?.size);
+  const btn = file
+    ? `<a class="btn" href="${esc(file)}" download>下载 APK${size ? `（${esc(size)}）` : ''}</a>`
+    : '<span class="btn" style="opacity:.5">安装包还在打包中</span>';
+  const meta = a
+    ? `版本 ${esc(a.version || '—')} · ${esc(a.updated || '')}${a.minSdk ? ` · 需要 Android ${esc(String(a.minSdk))}+` : ''}`
+    : '还没做好，过阵子再来。';
+  const notes = a?.notes
+    ? `<section class="done">
+    <h2>这一版有什么</h2>
+    <p>${esc(a.notes)}</p>
+  </section>
+`
+    : '';
+  const sum = a?.sha256
+    ? `    <p class="note">文件校验（SHA-256）：<code style="word-break:break-all">${esc(a.sha256)}</code></p>\n`
+    : '';
+  const body = `  <section class="empty" style="padding-top:18px">
+    <img class="empty__art" src="${base}assets/icons/icon-192.png" width="112" height="112" alt="App 图标" style="border-radius:26px">
+    <h1>下载 Android App</h1>
+    <p>原生客户端：看帖、回帖、登录注册都在手机上，不是网页套壳。</p>
+    ${btn}
+    <p class="empty__hint">${meta}</p>
+  </section>
+${notes}  <section class="done">
+    <h2>怎么装</h2>
+    <p>1. 点上面的按钮，把 .apk 文件下载到手机。</p>
+    <p>2. 手机会拦一下「不允许安装未知来源的应用」—— 去设置里给浏览器开一次权限。</p>
+    <p>3. 装完打开就能用，登录直接用你论坛那个邮箱账号。</p>
+${sum}  </section>
+  <section class="done" style="margin-top:16px">
+    <h2>不想装包？</h2>
+    <p>也可以把网页版装到手机桌面（iOS 也能用）：打开 <a href="${base}me/">我的</a> 页，点「安装到手机桌面」。</p>
+  </section>`;
+  return shell({
+    title: `下载 Android App — ${SITE.name}`,
+    description: '主播模拟器mod 的原生 Android 客户端安装包下载',
+    body,
+    base,
+    pageClass: 'page-download',
+    bare: true,
+    fab: false,
+    navOn: 'me',
+  });
+}
+
 function renderMe() {
   const p = SITE.post;
   const base = '../';
@@ -933,6 +1012,10 @@ function renderMe() {
       <p class="me__foot"><button class="me__out" id="out" type="button">退出登录</button></p>
     </div>
     <div class="me__extra">
+      <a class="me__row" href="../app/">
+        <span>下载 Android App</span>
+        <span class="me__chev" aria-hidden="true">›</span>
+      </a>
       <button class="me__row me__row--btn" id="me__install" type="button" hidden>
         <span>安装到手机桌面</span>
         <span class="me__chev" aria-hidden="true">›</span>
@@ -1688,6 +1771,7 @@ async function main() {
   rmSync(join(ROOT, 'post'), { recursive: true, force: true });
   rmSync(join(ROOT, 'search'), { recursive: true, force: true });
   rmSync(join(ROOT, 'me'), { recursive: true, force: true });
+  rmSync(join(ROOT, 'app'), { recursive: true, force: true });
   rmSync(join(ROOT, 'index.html'), { force: true });
   rmSync(join(ROOT, '404.html'), { force: true });
 
@@ -1703,6 +1787,7 @@ async function main() {
   writePage(join('login', 'index.html'), renderLogin(), 'login/index.html');
   writePage(join('register', 'index.html'), renderRegister(), 'register/index.html');
   writePage(join('admin', 'index.html'), renderAdmin(), 'admin/index.html');
+  writePage(join('app', 'index.html'), renderDownload(), 'app/index.html');
   // PWA 清单（图标是静态文件，这里只写清单）。放在根，作用域盖整个站点。
   writeFileSync(join(ROOT, 'manifest.webmanifest'), renderManifest());
   writeFileSync(join(ROOT, '.nojekyll'), '');
