@@ -16,7 +16,7 @@
  * 产物直接落在仓库根目录（index.html / t/<编号>/index.html / 404.html），
  * 因为 zbgamelt.github.io 是「用户站点」仓库，Pages 从 main 分支根目录发布。
  */
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -960,7 +960,7 @@ function renderDownload() {
   const body = `  <section class="empty" style="padding-top:18px">
     <img class="empty__art" src="${base}assets/icons/icon-192.png" width="112" height="112" alt="App 图标" style="border-radius:26px">
     <h1>下载 Android App</h1>
-    <p>原生客户端：看帖、回帖、登录注册都在手机上，不是网页套壳。</p>
+    <p>原生客户端：博客文章在手机上原生排版，论坛、登录也在里面，不是网页套壳。</p>
     ${btn}
     <p class="empty__hint">${meta}</p>
   </section>
@@ -1737,6 +1737,123 @@ function renderAdmin() {
   });
 }
 
+/**
+ * App 用的博客数据（blogfeed.json）。
+ *
+ * 博客源在 hugo-src/content/，HTML 由另一条 CI 线构建到 /zbgamelttwo/。
+ * 原生 App 里**没有浏览器内核**（这是刻意的，不是网页套壳），它不认 HTML ——
+ * 所以这里把同一份源 Markdown 抽成结构化 JSON 一起发布：App 读它，
+ * 正文在手机上用原生控件排。
+ *
+ * 只读源文件，**不碰 /zbgamelttwo/**（那是 hugo 那条线的产物目录）。
+ */
+const BLOG_BASE = 'https://zbgamelt.github.io/zbgamelttwo/';
+const BLOG = (() => {
+  let name = 'ZBGAME LT';
+  let desc = '';
+  try {
+    const t = readFileSync(join(ROOT, 'hugo-src', 'hugo.toml'), 'utf8');
+    name = (/^\s*title\s*=\s*"([^"]*)"/m.exec(t) || [, name])[1];
+    desc = (/^\s*description\s*=\s*"([^"]*)"/m.exec(t) || [, desc])[1];
+  } catch { /* 源不在就留默认 */ }
+  return { name, desc };
+})();
+
+/** Markdown → 纯文本（抽摘要用）。 */
+function mdPlain(s) {
+  return String(s || '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^[#>\-*\s]+/, '')
+    .trim();
+}
+
+function firstPara(md) {
+  for (const block of String(md || '').split(/\n\s*\n/)) {
+    const t = mdPlain(block.replace(/\n/g, ' '));
+    if (t) return t.length > 90 ? t.slice(0, 90) + '…' : t;
+  }
+  return '';
+}
+
+function readingMinutes(md) {
+  const text = mdPlain(md);
+  const cjk = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const words = (text.replace(/[\u4e00-\u9fa5]/g, ' ').match(/[A-Za-z0-9]+/g) || []).length;
+  return Math.max(1, Math.round((cjk + words * 2) / 350));
+}
+
+/** 极小的 front matter 解析：够用就好（标题/日期/描述/标签）。 */
+function parseFrontMatter(text) {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+  if (!m) return { data: {}, body: text };
+  const data = {};
+  for (const line of m[1].split(/\r?\n/)) {
+    const i = line.indexOf(':');
+    if (i < 0) continue;
+    const key = line.slice(0, i).trim();
+    let val = line.slice(i + 1).trim();
+    if (!key) continue;
+    if (val.startsWith('[')) {
+      try {
+        val = JSON.parse(val);
+      } catch {
+        val = val.slice(1, -1).split(',').map((x) => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      }
+    } else {
+      val = val.replace(/^["']|["']$/g, '');
+    }
+    data[key] = val;
+  }
+  return { data, body: text.slice(m[0].length) };
+}
+
+function writeBlogFeed() {
+  const contentDir = join(ROOT, 'hugo-src', 'content');
+  const postsDir = join(contentDir, 'posts');
+  const posts = [];
+  let files = [];
+  try { files = readdirSync(postsDir); } catch { files = []; }
+  for (const f of files) {
+    if (!f.endsWith('.md') || f.startsWith('_')) continue;
+    const { data, body } = parseFrontMatter(readFileSync(join(postsDir, f), 'utf8'));
+    const slug = f.replace(/\.md$/, '');
+    const md = body.trim();
+    posts.push({
+      slug,
+      title: String(data.title || slug),
+      date: String(data.date || ''),
+      dateText: String(data.date || '').slice(0, 10),
+      desc: String(data.description || ''),
+      tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+      summary: String(data.description || '') || firstPara(md),
+      reading: readingMinutes(md),
+      url: `${BLOG_BASE}posts/${slug}/`,
+      md,
+    });
+  }
+  posts.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  let about = { title: '关于', md: '' };
+  try {
+    const a = parseFrontMatter(readFileSync(join(contentDir, 'about.md'), 'utf8'));
+    about = { title: String(a.data.title || '关于'), md: a.body.trim() };
+  } catch { /* 没有关于页就不给，App 会自己藏起来 */ }
+
+  const feed = {
+    v: 1,
+    generated: new Date().toISOString(),
+    site: { title: BLOG.name, desc: BLOG.desc, home: BLOG_BASE, repo: REPO_URL },
+    about,
+    posts,
+  };
+  writeFileSync(join(ROOT, 'blogfeed.json'), JSON.stringify(feed, null, 1) + '\n');
+  return posts.length;
+}
+
 function writePage(relPath, html, label) {
   assertNoNestedAnchors(html, label || relPath);
   assertInlineScriptsParse(html, label || relPath);
@@ -1788,6 +1905,9 @@ async function main() {
   writePage(join('register', 'index.html'), renderRegister(), 'register/index.html');
   writePage(join('admin', 'index.html'), renderAdmin(), 'admin/index.html');
   writePage(join('app', 'index.html'), renderDownload(), 'app/index.html');
+  // App 的数据源：App 读这份 JSON，不读 HTML（它没有浏览器内核）
+  const blogCount = writeBlogFeed();
+  console.log(`  博客数据：blogfeed.json（${blogCount} 篇文章）`);
   // PWA 清单（图标是静态文件，这里只写清单）。放在根，作用域盖整个站点。
   writeFileSync(join(ROOT, 'manifest.webmanifest'), renderManifest());
   writeFileSync(join(ROOT, '.nojekyll'), '');

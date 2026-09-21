@@ -89,3 +89,9 @@ enableEmoji = true
   name = "关于"
   pageRef = "/about"
   weight = 40
+
+# App 下载入口（APK 在 GitHub Pages 上，不在服务器域名里）
+[[menus.main]]
+  name = "App"
+  url = "https://zbgamelt.github.io/app/"
+  weight = 50

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 跟站点同一套配色：近黑底 + 黄色点缀 -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0b0c0e</item>
+        <item name="android:colorAccent">#ffd83d</item>
+        <item name="android:statusBarColor">#0b0c0e</item>
+        <item name="android:navigationBarColor">#0b0c0e</item>
+        <item name="android:textColorPrimary">#e8e8ea</item>
+        <item name="android:textColorSecondary">#8b8f96</item>
+    </style>
+</resources>

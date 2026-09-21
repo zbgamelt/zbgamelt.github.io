@@ -95,21 +95,30 @@ iOS 没有这套 API，只能提示「分享 → 添加到主屏幕」。
 
 源码在 `app-android/`，产物 apk 放 `download/`，下载页是 `/app/`（由 `data/app.json` 提供版本信息）。
 
-- **原生 View 写界面，不是 WebView 套壳**：一行网页都不加载，直接调 Worker 的 HTTP 接口。
-- 为此 Worker 加了两个只读接口（给 App 用）：
+- **主角是博客**（`/zbgamelttwo/`）：App 打开就是文章列表，点进去是正文。
+- **原生 View 写界面，不是 WebView 套壳**：一行网页都不加载，装的包里连 `android.webkit`
+  一次都没引用（`dexdump` 可以验证）。正文的 Markdown 由 `Md.java` 排成原生控件
+  （标题/段落/列表/代码块/引用/表格/行内样式），不丢给 HTML。
+- **数据源**：构建时从 `hugo-src/content/` 的源 Markdown 抽出 `blogfeed.json`（站根，
+  跟站点一起发布）。App 直接读它，联网失败就用上次缓存的副本并提示「离线缓存」。
+  为什么不解析 HTML：原生 App 里没有浏览器内核，解析 HTML 等于自己造半个浏览器。
+- 论坛也在 App 里（首页的「论坛」按钮），走 Worker 的只读接口：
   - `GET /api/threads?page=&per=` → 帖子列表（分页）
   - `GET /api/thread?n=` → 单篇帖子（正文 + 评论一次给全）
   它们的数据源是站点上那份 CI 每次构建都刷新的 `data/discussions.json`，并在 KV 里缓存 120 秒。
   **为什么不直接问 GitHub**：读 Discussions 的 GraphQL 必须带 token，而 Worker 里没有可用的机器人
   token —— 发帖用的是**登录者自己**的 token，访客来读时手上没 token。
 - 编译：`cd app-android && ./build.sh`（aapt2 → javac → d8 → zipalign → apksigner，无 Gradle）。
+  ⚠️ 必须用 JDK 17/11 的 `javac`：JDK 21 编出来的类文件 `d8` 一律拒收（匿名内部类会抛 NPE）。
 - **安装包不放那台服务器的域名里**（用户明确要求）：APK 就放在仓库的 `download/` 里，
   由 GitHub Pages 直接发。
-- 发布新版：改版本号 → `./build.sh` → 把 apk 拷进 `download/` → 更新 `data/app.json`
-  （版本/大小/sha256）→ 提交。`data/app.json` 在 build.yml 的路径过滤里，会带动重建。
+- 发布新版：改 `AndroidManifest.xml` 的版本号 → `./build.sh` → 把 apk 拷进 `download/`
+  → 更新 `data/app.json`（版本/大小/sha256）→ 提交。`data/app.json` 在 build.yml 的路径过滤里，
+  会带动重建。
 
 ## 注意
 
 - Discussions 的正文由 GitHub 渲染成 HTML（`bodyHTML`），生成时会再过滤一遍
   `<script>`、`on*=` 之类的内容，但**发帖权限请只开给信任的人**，这是静态站的常规要求。
-- 不要手动编辑 `index.html` / `t/` / `404.html` / `manifest.webmanifest` / `app/`，下次构建会覆盖。
+- 不要手动编辑 `index.html` / `t/` / `404.html` / `manifest.webmanifest` / `app/` / `blogfeed.json`，
+  下次构建会覆盖。

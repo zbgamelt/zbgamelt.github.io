@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.zbgamelt.forum"
+    android:versionCode="2"
+    android:versionName="1.1.0">
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="35"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application
+        android:label="ZBGAME LT"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/AppTheme"
+        android:allowBackup="false"
+        android:supportsRtl="false">
+
+        <!-- 入口是博客：App 打开看到的就是文章列表 -->
+        <activity
+            android:name=".BlogListActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- 文章正文（原生控件排版，没有 WebView） -->
+        <activity
+            android:name=".PostActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"/>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"/>
+
+        <activity
+            android:name=".ThreadActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".AuthActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".MeActivity"
+            android:exported="false"/>
+    </application>
+</manifest>

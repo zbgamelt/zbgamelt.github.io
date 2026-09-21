@@ -1,9 +1,9 @@
 {
-  "version": "1.0.0",
-  "file": "/download/zbgamelt-1.0.0.apk",
-  "size": 58613,
-  "sha256": "f504475cbb6e8bb5a7deacbb39c0257b264b2b177078778eb09fc8a2431f057f",
+  "version": "1.1.0",
+  "file": "/download/zbgamelt-1.1.0.apk",
+  "size": 70901,
+  "sha256": "da06c6a79ead8c1fb015c2590f7919a864df8f2c9a5ed1fe0ec3928adf4c873f",
   "updated": "2026-09-21",
   "minSdk": 21,
-  "notes": "第一版：帖子列表、帖子详情、回帖、登录注册，全部在手机上原生操作，不套网页。"
+  "notes": "打开就是博客：文章列表、正文原生排版（标题、代码块、表格、引用都在），论坛和登录也装在里面。"
 }
