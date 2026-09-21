@@ -480,13 +480,6 @@ ${list.map((d) => threadRow(d, '')).join('\n')}
 }
 
 /**
- * giscus 嵌入（评论用）。
- * 用 mapping="number" + data-term=<讨论编号>：giscus 会直接走
- * GraphQL 的 discussion(number:) 精确取那一条，不走标题模糊搜索，
- * 所以不会串帖，也不需要嵌入 discussion 的 node ID。
- * （属性名是 data-term，不是 data-discussion —— 以 client.js loader 源码为准。）
- */
-/**
  * GitHub GraphQL 返回的 category.emoji 是短码（如 ":mega:"），不是 emoji 字符；
  * 样例数据里写的是真 emoji，所以本地预览盖不住这个坑。
  * 认得的映射成真 emoji，认不得的短码宁可留白，不要显示 ":xxx:" 生字。
@@ -515,32 +508,10 @@ function catEmoji(emoji) {
   return e;
 }
 
-function giscusWidget(d) {
-  const g = SITE.giscus;
-  if (!g?.repo || !g?.repoId || !g?.categoryId) return '';
-  return `    <div class="giscus"></div>
-    <script src="https://giscus.app/client.js"
-      data-repo="${esc(g.repo)}"
-      data-repo-id="${esc(g.repoId)}"
-      data-category="${esc(g.category || '')}"
-      data-category-id="${esc(g.categoryId)}"
-      data-mapping="${esc(g.mapping || 'number')}"
-      data-term="${esc(String(d.number))}"
-      data-reactions-enabled="${esc(g.reactionsEnabled || '1')}"
-      data-emit-metadata="0"
-      data-input-position="${esc(g.inputPosition || 'bottom')}"
-      data-theme="${esc(g.theme || 'dark')}"
-      data-lang="${esc(g.lang || 'zh-CN')}"
-      data-loading="lazy"
-      crossorigin="anonymous"
-      async></script>`;
-}
-
 /**
  * 帖子页：标题栏（返回键 + 居中标题）→ 正文 → 回复区。
- * 回复区保持原样（giscus 托管组件 + <noscript> 静态兜底）：
- * giscus 是第三方 iframe，样式改不了、且要登录 GitHub 才能评论，
- * 这点已跟用户确认，用户选择恢复原样。
+ * 回复区用站内评论（/assets/zsocial.js）：注册个邮箱账号就能回，不用 GitHub。
+ * giscus 时代留下的 GitHub 回复不再更新，退成构建期快照折进 <details> 备查。
  */
 function renderThread(d) {
   const comments = (d.comments?.nodes ?? [])
@@ -561,10 +532,13 @@ function renderThread(d) {
     </article>`,
     )
     .join('\n');
-  const giscus = giscusWidget(d);
-  const repliesBlock = giscus
-    ? `${giscus}\n    <noscript>\n${staticReplies}\n    </noscript>`
-    : staticReplies;
+  // 评论键用页面路径（跟博客的约定一致），帖子就是 t/<编号>
+  const threadKey = `t/${d.number}`;
+  // 旧的 GitHub 回复：giscus 撤掉后不再增长，这些是构建期快照。
+  // 折起来放着 —— 既不丢历史，也不挡着新的评论区。
+  const legacyBlock = comments.length
+    ? `    <details class="replies__old">\n      <summary>旧的 GitHub 回复（${comments.length}）</summary>\n${staticReplies}\n    </details>\n`
+    : '';
   const body = `  <header class="tbar tbar--act">
     <a class="tbar__back" href="../../" aria-label="返回话题列表"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
     <div class="tbar__label">帖子</div>
@@ -583,9 +557,7 @@ function renderThread(d) {
     <div class="md post__body">${sanitize(stripWebByline(d.bodyHTML))}</div>
   </article>
   <section class="replies">
-    <h2 class="replies__title">回复 <span>${comments.length}</span></h2>
-${repliesBlock}
-${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人回复，你可以是第一个。</p>' : ''}
+${legacyBlock}    <div data-zcomments="${esc(threadKey)}"></div>
   </section>
   <div class="confirm" id="cf" hidden>
     <div class="confirm__box" role="dialog" aria-modal="true" aria-labelledby="cf__t">
@@ -605,7 +577,7 @@ ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人�
     body,
     base: '../../',
     pageClass: 'page-thread',
-    script: threadOwnerScript(d),
+    script: `${threadOwnerScript(d)}\n<script src="../../assets/zsocial.js" defer></script>`,
     fab: false,   // 帖子页不要发布悬浮球
     nav: false,   // 底部栏只在首页和「我的」挂，别的页面不挂
   });

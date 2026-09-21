@@ -43,16 +43,16 @@ python3 -m http.server 8080
 构建用 `GITHUB_TOKEN`（workflow 里声明了 `discussions: read`）读 Discussions，
 再把生成的 HTML 提交回 `main`。因为推送用的是 `GITHUB_TOKEN`，不会再次触发自己。
 
-## 想换成 giscus 内嵌评论
+## 回复 / 评论
 
-现在回复是「点按钮跳到 GitHub Discussions」。如果哪天想让回复直接嵌在页面里，
-把 `data/site.json` 的 `giscus` 填上从 <https://giscus.app> 拿到的两个 ID 即可：
+帖子和博客文章的回复区是**站内评论**（`assets/zsocial.js` + Worker 的 `/comments` `/comment`），
+只要注册一个邮箱账号就能回，**不需要 GitHub 账号**。评论存在 Worker 的 KV 里，键是页面路径
+（帖子 `t/<编号>`，博客 `zbgamelttwo/posts/<slug>`）。登录态存在 `localStorage('zbforum_sess')`，
+论坛和博客同源共用一份。
 
-```json
-"giscus": { "repoId": "R_xxx", "categoryId": "DIC_xxx" }
-```
-
-前提是给这个仓库装上 giscus GitHub App（在 giscus.app 页面点授权，需要仓库管理员操作）。
+早先用的是 giscus（第三方 iframe，必须登录 GitHub），已经撤掉。那段时间留下的 GitHub 回复
+不丢，作为构建期快照折在帖子页的「旧的 GitHub 回复」`<details>` 里备查 —— 它**不再更新**，
+不要再把 `data/site.json` 的 `giscus` 当成生效配置（现在没有任何代码读它，属于遗留字段）。
 
 ## 注意
 

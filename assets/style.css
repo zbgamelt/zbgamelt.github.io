@@ -190,11 +190,16 @@ main { padding: 46px 0 72px; }
 .post__meta { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; color: var(--muted); font-size: 12.5px; }
 .post .post__body { padding: 0; }
 
-/* 回复区（giscus 托管 + 静态兜底）*/
+/* 回复区（站内评论，UI 由 /assets/zsocial.js 自带的 zc- 前缀样式负责）*/
 .replies { margin-top: 34px; }
-.replies__title { font-size: 15px; margin: 0 0 16px; color: var(--muted); font-weight: 600; }
-.replies__title span { color: var(--text-strong); }
-.replies__none { color: var(--muted); font-size: 14px; }
+/* 旧的 GitHub 回复：折起来备查，别抢新评论区的戏 */
+.replies__old {
+  margin: 0 0 22px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: rgba(255, 255, 255, .015);
+}
+.replies__old > summary { cursor: pointer; font-size: 14px; color: var(--muted); }
+.replies__old[open] > summary { margin-bottom: 14px; }
 .reply {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 18px 22px; margin-bottom: 12px;
@@ -253,10 +258,6 @@ main { padding: 46px 0 72px; }
   .top__inner { min-height: 52px; }
   .fab { right: 16px; bottom: 16px; }
 }
-
-/* giscus 评论区：iframe 高度由 giscus 自己 postMessage 调整 */
-.giscus { margin-top: 2px; }
-.giscus-frame { width: 100%; border: none; }
 
 /* ── 发新帖入口 ───────────────────────── */
 /* ── 搜索页 ─────────────────────────── */
