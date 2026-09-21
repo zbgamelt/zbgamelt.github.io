@@ -19,6 +19,7 @@
     <div class="gate" id="gate">
       <p>用 GitHub 账号登录后，这里能看到你自己的帖子。</p>
       <a class="btn" id="login">用 GitHub 登录</a>
+      <a class="btn btn--ghost" href="../login/">用邮箱登录 / 注册</a>
     </div>
     <div id="mebody" hidden>
       <div class="me__id">
@@ -27,6 +28,10 @@
       </div>
       <a class="me__row" href="posts/">
         <span>我的发帖</span>
+        <span class="me__chev" aria-hidden="true">›</span>
+      </a>
+      <a class="me__row" id="me__admin" href="../admin/" hidden>
+        <span>管理面板</span>
         <span class="me__chev" aria-hidden="true">›</span>
       </a>
       <p class="me__foot"><button class="me__out" id="out" type="button">退出登录</button></p>
@@ -57,6 +62,7 @@
     gate.hidden = true;
     mebody.hidden = false;
     document.getElementById('me__name').textContent = '@' + d.login;
+    if (d.role === 'admin') { document.getElementById('me__admin').hidden = false; }
     var av = document.getElementById('me__av');
     if (d.avatar) { av.src = d.avatar; } else { av.hidden = true; }
   }
