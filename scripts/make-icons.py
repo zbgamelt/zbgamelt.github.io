@@ -19,6 +19,7 @@ from PIL import Image, ImageDraw
 BG = (11, 12, 14)        # 近黑，跟站点 --bg 一致
 FG = (255, 216, 61)      # 黄，跟站点 --accent 一致
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'icons')
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 
 # 标记在 32 单位见方里的归一化坐标（照搬 favicon 的 SVG path）
 MARK = {
@@ -76,6 +77,16 @@ def main():
     for name, size, k, cr in jobs:
         p = os.path.join(OUT, name)
         render(size, k, cr).save(p, 'PNG', optimize=True)
+        print(f'  {name:26s} {size}×{size}  {os.path.getsize(p):>6d} B')
+
+    # 站点根的 favicon：浏览器/爬虫的兜底，也给子站（hugo.toml 的 params.assets）引用。
+    # 子站发布在 /zbgamelttwo/ 下，所以这两个文件必须放在**源根**。
+    ico = os.path.join(ROOT, 'favicon.ico')
+    render(64, 1.34, 0.22).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])
+    print(f'  {"favicon.ico":26s} 16/32/48     {os.path.getsize(ico):>6d} B')
+    for name, size in (('favicon-16x16.png', 16), ('favicon-32x32.png', 32)):
+        p = os.path.join(ROOT, name)
+        render(size, 1.34, 0.22).save(p, 'PNG', optimize=True)
         print(f'  {name:26s} {size}×{size}  {os.path.getsize(p):>6d} B')
 
 

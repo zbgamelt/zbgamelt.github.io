@@ -72,14 +72,21 @@ python3 -m http.server 8080
 - `offline.html` —— 断网兜底页，样式全内联，不依赖 style.css 有没有被缓存住。
 - `assets/icons/` —— 图标（192 / 512 / maskable / apple-touch）。
   改图标就改 `scripts/make-icons.py` 然后 `python3 scripts/make-icons.py`；
+  它同时会写**源根**的 `favicon.ico` / `favicon-16x16.png` / `favicon-32x32.png`。
   图形跟 favicon（build.mjs 里的 `FAVICON`）是同一个标记，改一个记得改另一个。
 
 安装入口在「我的」页（`/me/`）。Android/Chrome 走 `beforeinstallprompt` 一键装，
 iOS 没有这套 API，只能提示「分享 → 添加到主屏幕」。
 
-⚠️ 子站（`hugo-src/layouts/_partials/extend_head.html`）里引 manifest 和图标必须写
+⚠️ 子站（`hugo-src/layouts/_partials/extend_head.html`）里引 manifest 必须写
 **源根的绝对路径** `/manifest.webmanifest`，不能用 `relURL` —— 子站发布在 `/zbgamelttwo/` 下，
 `relURL` 会拼成 `/zbgamelttwo/manifest.webmanifest`，那是 404。
+同理，`hugo-src/hugo.toml` 的 `[params.assets]` 里，源根的图标也一律写前导斜杠。
+
+⚠️ **别让同一个标签出现两份。** PaperMod 自己会输出 `theme-color`、`apple-touch-icon`、
+`favicon` 这几个标签，所以它们统一由 `[params.assets]` 指过去，**不要在 `extend_head.html`
+里再写一遍** —— 两边各写一份的后果是页面里两个 `theme-color`，装到桌面后状态栏是 PaperMod
+默认的灰色，而不是站点的近黑。
 
 ## 注意
 

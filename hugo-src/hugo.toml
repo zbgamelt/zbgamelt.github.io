@@ -29,6 +29,18 @@ enableEmoji = true
   author = "zbgamelt"
   mainSections = ["posts"]
 
+  # 图标和主题色跟论坛那边统一（同一个源、同一个 App）。
+  # 站点根的图标写前导斜杠 = 从源根取，**不能**用相对路径 —— 子站在 /zbgamelttwo/ 下，
+  # 相对路径会去找 /zbgamelttwo/favicon.ico，那是 404。
+  [params.assets]
+    favicon = "/favicon.ico"
+    favicon16x16 = "/favicon-16x16.png"
+    favicon32x32 = "/favicon-32x32.png"
+    apple_touch_icon = "/assets/icons/apple-touch-icon.png"
+    theme_color = "#0b0c0e"
+    # 这个在子站自己的 static/ 里，相对路径即可
+    safari_pinned_tab = "safari-pinned-tab.svg"
+
   # 只用深色，不给切换（用户偏好近黑 + 黄色强调）
   defaultTheme = "dark"
   disableThemeToggle = true
