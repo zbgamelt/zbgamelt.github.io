@@ -29,18 +29,6 @@ enableEmoji = true
   author = "zbgamelt"
   mainSections = ["posts"]
 
-  # 图标和主题色跟论坛那边统一（同一个源、同一个 App）。
-  # 站点根的图标写前导斜杠 = 从源根取，**不能**用相对路径 —— 子站在 /zbgamelttwo/ 下，
-  # 相对路径会去找 /zbgamelttwo/favicon.ico，那是 404。
-  [params.assets]
-    favicon = "/favicon.ico"
-    favicon16x16 = "/favicon-16x16.png"
-    favicon32x32 = "/favicon-32x32.png"
-    apple_touch_icon = "/assets/icons/apple-touch-icon.png"
-    theme_color = "#0b0c0e"
-    # 这个在子站自己的 static/ 里，相对路径即可
-    safari_pinned_tab = "safari-pinned-tab.svg"
-
   # 只用深色，不给切换（用户偏好近黑 + 黄色强调）
   defaultTheme = "dark"
   disableThemeToggle = true
@@ -57,6 +45,21 @@ enableEmoji = true
   comments = true
   ShowFullTextinRSS = false
   hideFooter = false
+
+  # ⚠️ 这张子表必须放在 [params] 里**所有普通配置之后**。
+  #    TOML 里 [params.assets] 一旦开张，后面所有裸键（defaultTheme、comments 这种）
+  #    都会挂到 params.assets 名下，而不是 params —— 曾经就因为把这张表插在中间，
+  #    comments = true 变成了 params.assets.comments，主题判定 .Param "comments" 为假，
+  #    整块评论区（连带里面的登录/注册）直接从博客上消失，页面还不报错。
+  #    以后加配置请加在上面那堆里，别再往中间插表。
+  [params.assets]
+    favicon = "/favicon.ico"
+    favicon16x16 = "/favicon-16x16.png"
+    favicon32x32 = "/favicon-32x32.png"
+    apple_touch_icon = "/assets/icons/apple-touch-icon.png"
+    theme_color = "#0b0c0e"
+    # 这个在子站自己的 static/ 里，相对路径即可
+    safari_pinned_tab = "safari-pinned-tab.svg"
 
   [params.homeInfoParams]
     Title = "ZBGAME LT"
@@ -95,3 +98,10 @@ enableEmoji = true
   name = "App"
   url = "https://zbgamelt.github.io/app/"
   weight = 50
+
+# 发帖/登录/注册在论坛那边做（同一个账号、同一个源），博客导航上也留个入口，
+# 免得从博客进来的读者找不到这些功能。
+[[menus.main]]
+  name = "发帖"
+  url = "https://zbgamelt.github.io/post/"
+  weight = 60
