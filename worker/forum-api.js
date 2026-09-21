@@ -193,6 +193,23 @@ const ONE_QUERY = `query($owner:String!,$name:String!,$number:Int!){
 
 const DELETE_MUT = `mutation($id:ID!){ deleteDiscussion(input:{id:$id}){ discussion{ number } } }`;
 
+/**
+ * 把 GitHub 的原始报错翻成人话。
+ * deleteDiscussion 被权限拒时 GraphQL 返回的是：
+ * [{"type":"FORBIDDEN","path":["deleteDiscussion"],"message":"<login> does not
+ * have the correct permissions to execute `DeleteDiscussion`"}] ——
+ * 这串直接甩到页面上没法看。
+ */
+function delError(msg) {
+  const m = String(msg || '');
+  if (m.includes('Bad credentials')) return '站点用的 GitHub token 已失效，暂时删不了';
+  if (m.includes('FORBIDDEN') || m.includes('does not have the correct permissions')) {
+    return 'GitHub 不让删：站点这边缺一个能写 Discussions 的仓库 token';
+  }
+  if (/not found|Could not resolve/i.test(m)) return '这条帖子已经不在 GitHub 上了';
+  return m.slice(0, 160) || '删除失败';
+}
+
 /** 正文 HTML → 列表用的纯文本摘要（口径跟站点首页的 bodyText 一致）。 */
 function excerptOf(html, max = 96) {
   const t = String(html || '')
@@ -341,6 +358,10 @@ export default {
       if (!numbers.length) return json(env, { error: '没给要删的帖子编号' }, 400);
 
       const mine = s.l.toLowerCase();
+      // 删帖得用「仓库级 token」：GitHub 不让普通用户对自己的讨论跑 deleteDiscussion
+      //（只有对该仓库有写权限才行），拿登录者自己的 token 删必定 FORBIDDEN。
+      // 作者核对仍然用登录者自己的 token —— 保证只能删自己的。
+      const delTok = String(env.GITHUB_TOKEN || '').trim() || s.t;
       const deleted = [];
       const failed = [];
       for (const n of numbers) {
@@ -355,10 +376,10 @@ export default {
             failed.push({ n, error: '只能删自己发的帖子' });
             continue;
           }
-          await gql(s.t, DELETE_MUT, { id: d.id });
+          await gql(delTok, DELETE_MUT, { id: d.id });
           deleted.push(n);
         } catch (err) {
-          failed.push({ n, error: String(err.message || '删除失败').slice(0, 160) });
+          failed.push({ n, error: delError(err.message) });
         }
       }
       // 删成功就让站点尽快重建；失败无所谓，还有定时同步兜底

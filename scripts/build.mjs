@@ -565,9 +565,13 @@ function renderThread(d) {
   const repliesBlock = giscus
     ? `${giscus}\n    <noscript>\n${staticReplies}\n    </noscript>`
     : staticReplies;
-  const body = `  <header class="tbar">
+  const body = `  <header class="tbar tbar--act">
     <a class="tbar__back" href="../../" aria-label="返回话题列表"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
     <div class="tbar__label">帖子</div>
+    <div class="tbar__right">
+      <button class="tbar__more" id="more" type="button" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false" hidden>${ICON_MORE}</button>
+      <div class="tbar__menu" id="menu" role="menu" hidden><button type="button" role="menuitem" data-act="del">删除帖子</button></div>
+    </div>
   </header>
   <article class="post">
     <h1 class="post__title">${esc(d.title)}</h1>
@@ -583,6 +587,17 @@ function renderThread(d) {
 ${repliesBlock}
 ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人回复，你可以是第一个。</p>' : ''}
   </section>
+  <div class="confirm" id="cf" hidden>
+    <div class="confirm__box" role="dialog" aria-modal="true" aria-labelledby="cf__t">
+      <h2 id="cf__t">删除这篇帖子？</h2>
+      <p>删掉就没了，GitHub 上的讨论也会一起消失。</p>
+      <p class="confirm__err" id="cf__err" hidden></p>
+      <div class="confirm__foot">
+        <button class="btn btn--ghost" id="cf__no" type="button">再想想</button>
+        <button class="btn btn--danger" id="cf__yes" type="button">删除</button>
+      </div>
+    </div>
+  </div>
 `;
   return shell({
     title: `${d.title} — ${SITE.name}`,
@@ -590,9 +605,99 @@ ${comments.length === 0 && !giscus ? '    <p class="replies__none">还没有人�
     body,
     base: '../../',
     pageClass: 'page-thread',
+    script: threadOwnerScript(d),
     fab: false,   // 帖子页不要发布悬浮球
-    navOn: 'home',
+    nav: false,   // 底部栏只在首页和「我的」挂，别的页面不挂
   });
+}
+
+/**
+ * 帖子页右上角的 3 点菜单：只有「删除帖子」，且只有作者本人看得到。
+ * 页面是静态的，作者在构建期就知道；访客身份只能到浏览器里问 /api/me，
+ * 所以按钮默认 hidden，核对通过才显示 —— 未登录的人连按钮都看不见。
+ * 删帖走 Worker，作者核对也在 Worker 里再做一次（前端藏按钮只是障眼法）。
+ */
+function threadOwnerScript(d) {
+  const apiBase = apiBaseOf(SITE.post);
+  const author = String(d.author?.login || '').toLowerCase();
+  const n = Number(d.number) || 0;
+  if (!apiBase || !author || !n) return '';
+  return `<script>
+(function () {
+  var API = ${JSON.stringify(apiBase)};
+  var N = ${n};
+  var AUTHOR = ${JSON.stringify(author)};
+  var KEY = 'zbforum_sess';
+  var S = '';
+  try { S = localStorage.getItem(KEY) || ''; } catch (e) { S = ''; }
+  if (location.hash.indexOf('#s=') === 0) {
+    S = location.hash.slice(3);
+    try { localStorage.setItem(KEY, S); } catch (e) {}
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  var more = document.getElementById('more');
+  var menu = document.getElementById('menu');
+  var cf = document.getElementById('cf');
+  var err = document.getElementById('cf__err');
+  var yes = document.getElementById('cf__yes');
+  if (!more || !menu || !cf || !S) return;
+
+  function closeMenu() {
+    menu.hidden = true;
+    more.setAttribute('aria-expanded', 'false');
+  }
+
+  fetch(API + '/api/me', { headers: { Authorization: 'Bearer ' + S } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !d.login || String(d.login).toLowerCase() !== AUTHOR) return;
+      more.hidden = false;
+    })
+    .catch(function () {});
+
+  more.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = menu.hidden;
+    menu.hidden = !open;
+    more.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', closeMenu);
+  menu.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-act="del"]') : null;
+    if (!btn) return;
+    closeMenu();
+    cf.hidden = false;
+  });
+  document.getElementById('cf__no').addEventListener('click', function () { cf.hidden = true; });
+  yes.addEventListener('click', function () {
+    yes.disabled = true;
+    yes.textContent = '正在删除…';
+    err.hidden = true;
+    fetch(API + '/delete-post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S },
+      body: JSON.stringify({ numbers: [N] })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        var d = res.d || {};
+        if ((d.deleted || []).indexOf(N) !== -1) { location.href = '../../'; return; }
+        var msg = (d.failed && d.failed[0] && d.failed[0].error) || d.error || '删除失败，请稍后再试';
+        err.textContent = msg;
+        err.hidden = false;
+        yes.disabled = false;
+        yes.textContent = '重试';
+      })
+      .catch(function () {
+        err.textContent = '网络不好，删除没发出去';
+        err.hidden = false;
+        yes.disabled = false;
+        yes.textContent = '重试';
+      });
+  });
+})();
+</script>`;
 }
 
 /**
@@ -1166,7 +1271,7 @@ function renderSearch(discussions) {
     script,
     bare: true,
     fab: false,
-    navOn: 'home',
+    nav: false,   // 搜索页也不挂底部栏
   });
 }
 

@@ -371,6 +371,27 @@ body.has-nav .fab { bottom: calc(var(--nav-h) + 22px); }
 .tbar__act--go { color: var(--accent); font-weight: 650; }
 .tbar__act[disabled] { color: #4d545c; cursor: default; }
 
+/* ── 帖子页右上角 3 点菜单（只有作者本人看得到）── */
+/* 按钮藏起来时右侧槽位仍然占宽，标题不会因为登录前后而横向跳一下 */
+.tbar__right { position: relative; }
+.tbar__more {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; margin-right: -8px; padding: 0; border: 0; border-radius: 10px;
+  background: none; color: #6b727c; cursor: pointer;
+}
+.tbar__more:hover, .tbar__more[aria-expanded="true"] { background: var(--card-2); color: var(--text); }
+.tbar__menu {
+  position: absolute; top: 42px; right: -4px; z-index: 9;
+  min-width: 150px; padding: 6px;
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .55);
+}
+.tbar__menu button {
+  display: block; width: 100%; padding: 9px 12px; border: 0; border-radius: 8px;
+  background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.tbar__menu button:hover { background: var(--card-2); color: var(--danger); }
+
 /* ── 「我的」页 ─────────────────────────── */
 .me { padding-top: 8px; }
 .me__id { display: flex; align-items: center; gap: 14px; margin: 0 0 30px; }
@@ -451,6 +472,7 @@ body.has-nav .fab { bottom: calc(var(--nav-h) + 22px); }
 .confirm__box p { margin: 0 0 20px; color: var(--muted); font-size: 13.5px; }
 .confirm__foot { display: flex; gap: 10px; justify-content: flex-end; }
 .confirm__foot .btn { padding: 9px 18px; font-size: 14px; }
+.confirm__err { margin: -8px 0 18px; color: #d9a03a; font-size: 13px; line-height: 1.5; }
 .btn--danger { background: var(--danger); color: #fff; }
 .btn--danger:hover { color: #fff; filter: brightness(1.08); }
 
