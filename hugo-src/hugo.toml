@@ -99,10 +99,3 @@ enableEmoji = true
   name = "App"
   url = "https://zbgamelt.github.io/app/"
   weight = 50
-
-# 发帖/登录/注册在论坛那边做（同一个账号、同一个源），博客导航上也留个入口，
-# 免得从博客进来的读者找不到这些功能。
-[[menus.main]]
-  name = "发帖"
-  url = "https://zbgamelt.github.io/post/"
-  weight = 60
