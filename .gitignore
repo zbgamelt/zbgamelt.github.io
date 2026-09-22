@@ -1,0 +1,3 @@
+# 评论令牌只在本地打进 APK，绝不入库（仓库是公开的）
+app-android/zbg/assets/comment.token
+app-android/zbg/build/

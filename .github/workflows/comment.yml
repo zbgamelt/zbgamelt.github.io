@@ -1,0 +1,73 @@
+name: 接收评论
+
+# 评论的「服务端」。GitHub Pages 是纯静态托管，跑不了服务端进程，
+# 所以写入端由本工作流承担：App 用细粒度令牌触发（只需要 Actions: write 一种权限），
+# 真正的仓库写权限由本工作流自己的 GITHUB_TOKEN 提供（见下面 permissions）。
+# 数据落在 data/comments.json，Pages 会原样对外提供静态读取。
+#
+# ⚠️ 两条 GitHub 规则，改这里之前先读完（与 hugo-subsite.yml 同源）：
+#   1. 用仓库自带 GITHUB_TOKEN 推出去的提交，不会触发任何 workflow（递归防护）。
+#      也就是说这次提交只更新 Pages，不会连锁触发 hugo-subsite。
+#   2. 推送失败必须重试，且三次都失败要 exit 1 —— 否则最后一条 git pull
+#      会把失败掩盖成 success（2026-09-20 的事故就是这么静默过去的）。
+on:
+  workflow_dispatch:
+    inputs:
+      post:
+        description: 文章 slug
+        required: true
+        type: string
+      name:
+        description: 昵称（可留空，默认「路人」）
+        required: false
+        type: string
+      text:
+        description: 评论正文
+        required: true
+        type: string
+      cid:
+        description: 客户端评论 id（App 用来确认发布成功）
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: comment-append
+  cancel-in-progress: false
+
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 校验并写入
+        env:
+          C_POST: ${{ inputs.post }}
+          C_NAME: ${{ inputs.name }}
+          C_TEXT: ${{ inputs.text }}
+          C_CID: ${{ inputs.cid }}
+        run: node .github/scripts/append-comment.mjs
+
+      - name: 提交
+        run: |
+          git config user.name  "zbgamelt"
+          git config user.email "297119334+zbgamelt@users.noreply.github.com"
+          git add data/comments.json
+          if git diff --cached --quiet; then
+            echo "没有新评论，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(comments): 新评论"
+          for i in 1 2 3; do
+            if git push; then
+              echo "✓ 已推送"
+              exit 0
+            fi
+            echo "push 被拒，第 $i 次 rebase 重试"
+            git pull --rebase --autostash origin main
+          done
+          echo "::error::push 重试 3 次仍被拒"
+          exit 1
