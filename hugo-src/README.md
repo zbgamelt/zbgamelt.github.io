@@ -37,7 +37,7 @@ hugo --baseURL "http://127.0.0.1:8902/" -d /tmp/preview
 - ⚠️ **文章 `date` 不要写到未来**：Hugo 默认跳过未来日期的文章，而且**不报错**——
   表现是构建成功但那一页压根不存在（`Pages` 计数也不变）。写当天日期要留余量。
 - `zbgamelttwo/` 是**生成物**，由 `.github/workflows/hugo-subsite.yml` 自动重建并提交，手改会被覆盖。
-- 论坛的 `scripts/build.mjs` 只清理 `t/`、`post/`、`search/`、`me/`、`index.html`、`404.html`，不会碰这个目录。
+- 论坛已于 2026-09-22 整体下线，这个目录现在是仓库里唯一需要构建的东西。
 
 ## CI：为什么这条线最后要去叫醒论坛的 workflow
 

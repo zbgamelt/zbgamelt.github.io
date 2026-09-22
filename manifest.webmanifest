@@ -1,9 +1,9 @@
 {
   "name": "ZBGAME LT",
   "short_name": "ZBGAME",
-  "description": "主播模拟器 mod 讨论区 + 博客",
+  "description": "ZBGAME LT 的博客与 App 下载",
   "lang": "zh-CN",
-  "start_url": "/",
+  "start_url": "/zbgamelttwo/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0b0c0e",
@@ -30,16 +30,12 @@
   ],
   "shortcuts": [
     {
-      "name": "论坛",
-      "url": "/"
-    },
-    {
       "name": "博客",
       "url": "/zbgamelttwo/"
     },
     {
-      "name": "我的",
-      "url": "/me/"
+      "name": "App 下载",
+      "url": "/app/"
     }
   ]
 }

@@ -2,98 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>主播模拟器mod — 提问 · 反馈 · 闲聊</title>
-<meta name="description" content="zbgamelt 的讨论区：版本反馈、问题求助、功能建议，都在这儿。">
-<meta name="color-scheme" content="dark">
-<meta property="og:title" content="主播模拟器mod — 提问 · 反馈 · 闲聊">
-<meta property="og:description" content="zbgamelt 的讨论区：版本反馈、问题求助、功能建议，都在这儿。">
-<meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%230b0c0e%22%2F%3E%3Cpath%20d%3D%22M8%2010.5h16v9a2%202%200%200%201-2%202h-8l-4.5%203.5V21.5H10a2%202%200%200%201-2-2z%22%20fill%3D%22%23ffd83d%22%2F%3E%3C%2Fsvg%3E">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#0b0c0e">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ZBGAME">
-<link rel="stylesheet" href="assets/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>前往博客 — ZBGAME LT</title>
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0; url=/zbgamelttwo/">
+<link rel="canonical" href="/zbgamelttwo/">
+<link rel="icon" href="/favicon.ico">
+<style>
+html { color-scheme: dark; }
+body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+       background: #0b0c0e; color: #9aa2ad;
+       font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "Noto Sans CJK SC", sans-serif; }
+a { color: #ffd83d; }
+</style>
 </head>
-<body class="page-index has-nav">
-<a class="skip" href="#main">跳到内容</a>
-<header class="top">
-  <div class="wrap top__inner">
-    <a class="brand" href="./">主播模拟器mod</a>
-    <a class="iconbtn" href="search/" aria-label="搜索帖子" title="搜索"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.68 11.74a6 6 0 0 1-7.92-.62 6 6 0 1 1 8.54 0l3.03 3.03-1.06 1.06zM9.11 4.5a4 4 0 1 0-5.66 5.66 4 4 0 0 0 5.66-5.66z"/></svg></a>
-  </div>
-</header>
-<main id="main" class="wrap">
-  <nav class="tabs" aria-label="排序">
-    <button class="tab is-active" type="button" data-sort="new" aria-pressed="true">最新</button>
-    <button class="tab" type="button" data-sort="old" aria-pressed="false">最早</button>
-  </nav>
-  <section class="list" id="list">
-    <a class="thread" href="t/1/" data-cat="Announcements" data-ts="1789887481000">
-      <h2 class="thread__title">Welcome to zbgamelt.github.io Discussions!</h2>
-      <p class="thread__excerpt">👋 Welcome! We’re using Discussions as a place to connect with other members of our community.…</p>
-      <div class="thread__meta">
-        <span class="author">zbgamelt</span>
-        <time datetime="2026-09-20T06:58:01Z" title="2026/09/20 14:58">2026/09/20 14:58</time>
-      </div>
-    </a>
-  </section>
-</main>
-<a class="fab" href="post/" aria-label="发新帖" title="发新帖"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8.75 2.5v4.75H13.5v1.5H8.75v4.75h-1.5V8.75H2.5v-1.5h4.75V2.5z"/></svg></a>
-<nav class="bnav" aria-label="主导航">
-  <a class="bnav__item is-on" href="./" aria-current="page"><svg viewBox="0 0 16 16" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M8 1.3 1.6 6.8V15h4.5v-4.4h3.8V15h4.5V6.8z"/></svg><span>首页</span></a>
-  <a class="bnav__item" href="me/"><svg viewBox="0 0 16 16" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M8 8.3a3.65 3.65 0 1 0 0-7.3 3.65 3.65 0 0 0 0 7.3m0 1.5c-3.2 0-5.8 1.7-5.8 3.8V15h11.6v-1.4c0-2.1-2.6-3.8-5.8-3.8"/></svg><span>我的</span></a>
-</nav>
-<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script><script>
-(function () {
-  // 相对时间（“3 天前”）在浏览器里算：静态 HTML 里存的是绝对时间，
-  // 否则每次构建都会因为“多久之前”变了而提交一次，纯属噪声。
-  function ago(iso) {
-    var t = new Date(iso).getTime();
-    if (isNaN(t)) return null;
-    var m = Math.round((Date.now() - t) / 60000);
-    if (m < 1) return '刚刚';
-    if (m < 60) return m + ' 分钟前';
-    var h = Math.round(m / 60);
-    if (h < 24) return h + ' 小时前';
-    var d = Math.round(h / 24);
-    if (d < 30) return d + ' 天前';
-    var mo = Math.round(d / 30);
-    if (mo < 12) return mo + ' 个月前';
-    return Math.round(mo / 12) + ' 年前';
-  }
-  Array.prototype.forEach.call(document.querySelectorAll('.thread__meta time[datetime]'), function (el) {
-    var rel = ago(el.getAttribute('datetime'));
-    if (rel) el.textContent = rel;
-  });
-
-  // 排序：按卡片上的 data-ts 重排 DOM，不刷新页面
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
-  var list = document.getElementById('list');
-  if (!list) return;
-  var rows = Array.prototype.slice.call(list.children);
-  tabs.forEach(function (t) {
-    t.addEventListener('click', function () {
-      tabs.forEach(function (o) {
-        var on = o === t;
-        o.classList.toggle('is-active', on);
-        o.setAttribute('aria-pressed', on ? 'true' : 'false');
-      });
-      rows
-        .slice()
-        .sort(function (a, b) {
-          var x = +a.dataset.ts || 0;
-          var y = +b.dataset.ts || 0;
-          return t.dataset.sort === 'old' ? x - y : y - x;
-        })
-        .forEach(function (el) { list.appendChild(el); });
-    });
-  });
-})();
-</script>
+<body>
+<!-- 论坛已下线（2026-09-22），根地址直接送到博客。 -->
+<p>正在前往博客… <a href="/zbgamelttwo/">没反应就点这里</a></p>
+<script>location.replace('/zbgamelttwo/')</script>
 </body>
 </html>

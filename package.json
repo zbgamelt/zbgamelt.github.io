@@ -2,10 +2,8 @@
   "name": "zbgamelt.github.io",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "description": "GitHub Discussions 转静态论坛（零依赖）",
+  "description": "ZBGAME LT：Hugo 博客子站（hugo-src/ → zbgamelttwo/）+ Android App 下载页",
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "preview": "node scripts/build.mjs --sample && python3 -m http.server 8080"
+    "icons": "python3 scripts/make-icons.py"
   }
 }

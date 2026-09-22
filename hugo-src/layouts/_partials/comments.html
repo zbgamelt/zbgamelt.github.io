@@ -1,8 +1,11 @@
-{{- /* 评论区：本站账号的评论系统（挂 Cloudflare Worker，不需要 GitHub 账号）。
-       这里只放一个空容器，真正的 UI 由 /assets/zsocial.js 挂载；
-       键用页面路径，所以同一篇文章的评论稳定落在一起。 */ -}}
-{{- $key := .RelPermalink | strings.TrimPrefix "/" | strings.TrimSuffix "/" -}}
-<section class="post-comments" aria-label="评论">
-  <div data-zcomments="{{ $key }}"></div>
-</section>
-<script src="/assets/zsocial.js" defer></script>
+{{- /*
+  评论区 —— 2026-09-22 已下线。
+
+  原先这里只放一个空容器，真正的 UI 由 /assets/zsocial.js 拉起来：那是本站自己的
+  评论系统（邮箱账号，不需要 GitHub），后端是 Cloudflare Worker `zbgamelt-forum-api`。
+  论坛整体下线时，Worker、KV 和 assets/zsocial.js 一起删掉了，所以这个 partial
+  现在什么都不输出 —— 保留它只是为了让「评论为什么没了」这件事有据可查。
+
+  以后想重新开评论：先把后端部署回来，再把挂载脚本和容器加回这里，
+  同时把 hugo.toml 里的 `comments` 打开（两处都要，少一处页面上就是一块空白）。
+*/ -}}
