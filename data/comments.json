@@ -1,14 +1,1 @@
-{
-  "updated": "2026-09-22T14:49:06.825Z",
-  "count": 1,
-  "comments": [
-    {
-      "id": "ctest-verify01",
-      "post": "hello-world",
-      "name": "路人",
-      "text": "测试一条评论：验证 App 能从 github.io 读到并显示。",
-      "ts": 1790088546825,
-      "timeText": "09-22 22:49"
-    }
-  ]
-}
+{"updated":null,"count":0,"comments":[]}
